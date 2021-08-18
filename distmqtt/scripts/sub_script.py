@@ -53,10 +53,10 @@ def _gen_client_id():
 
 
 def _get_qos(arguments):
-    try:
-        return int(arguments["--qos"])
-    except KeyError:
-        return QOS_0
+    # try:
+    #     return int(arguments["--qos"])
+    # except KeyError:
+    return QOS_0
 
 
 def _get_extra_headers(arguments):
@@ -122,10 +122,14 @@ async def main():
         config = read_yaml_config(arguments["-c"])
     else:
         config = read_yaml_config(
-            os.path.join(os.path.dirname(os.path.realpath(__file__)), "default_client.yaml")
+            os.path.join(
+                os.path.dirname(os.path.realpath(__file__)), "default_client.yaml"
+            )
         )
         logger.debug(
-            os.path.join(os.path.dirname(os.path.realpath(__file__)), "default_client.yaml")
+            os.path.join(
+                os.path.dirname(os.path.realpath(__file__)), "default_client.yaml"
+            )
         )
         logger.debug("Using default configuration")
 
@@ -143,7 +147,9 @@ async def main():
         config["will"]["qos"] = _get_qos(arguments)
         config["will"]["retain"] = arguments["--will-retain"]
 
-    async with open_mqttclient(client_id=client_id, config=config, codec=arguments["-C"]) as C:
+    async with open_mqttclient(
+        client_id=client_id, config=config, codec=arguments["-C"]
+    ) as C:
         await do_sub(C, arguments)
 
 

@@ -59,10 +59,11 @@ def _gen_client_id():
 
 
 def _get_qos(arguments):
-    try:
-        return int(arguments["--qos"])
-    except Exception:
-        return None
+    # try:
+    #     return int(arguments["--qos"])
+    # except Exception:
+    #     return None
+    return None
 
 
 def _get_extra_headers(arguments):
@@ -73,14 +74,13 @@ def _get_extra_headers(arguments):
 
 
 def _get_message(arguments):
-    codec = arguments["-C"] or "utf-8"
-    codec = _codecs[codec]()
-
     if arguments["-n"]:
         yield b""
     if arguments["-m"]:
         yield arguments["-m"].encode(encoding="utf-8")
     if arguments["-M"]:
+        codec = arguments["-C"] or "utf-8"
+        codec = _codecs[codec]()
         yield codec.encode(eval(arguments["-M"]))  # pylint: disable=eval-used
     if arguments["-f"]:
         try:
@@ -99,6 +99,8 @@ def _get_message(arguments):
             message.extend(line.encode(encoding="utf-8"))
         yield message
     if arguments["-S"]:
+        codec = arguments["-C"] or "utf-8"
+        codec = _codecs[codec]()
         message = sys.stdin.read()
         yield codec.encode(eval(message))  # pylint: disable=eval-used
 
@@ -148,7 +150,9 @@ async def main():
         config = read_yaml_config(arguments["-c"])
     else:
         config = read_yaml_config(
-            os.path.join(os.path.dirname(os.path.realpath(__file__)), "default_client.yaml")
+            os.path.join(
+                os.path.dirname(os.path.realpath(__file__)), "default_client.yaml"
+            )
         )
         logger.debug("Using default configuration")
 
