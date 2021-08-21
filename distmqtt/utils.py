@@ -5,6 +5,7 @@ import logging
 import attr
 import anyio
 import yaml
+import os
 
 from .errors import InvalidStateError
 
@@ -42,6 +43,52 @@ def read_yaml_config(config_file):
     except yaml.YAMLError as exc:
         logger.error("Invalid config_file %s: %r", config_file, exc)
     return config
+
+
+def ecqv_pem_pk_extract(ecqv_utils_path, key_path):
+    s = os.popen("%s ca_public_key -k %s" % (ecqv_utils_path, key_path))
+    return s.read().strip()
+
+
+def ecqv_cert_request(ecqv_utils_path, identity, key_path):
+    s = os.popen("%s cert_request -i %s -r %s" % (ecqv_utils_path, identity, key_path))
+    return s.read().strip()
+
+
+def ecqv_cert_generate(ecqv_utils_path, identity, requester_pk, key_path):
+    s = os.popen(
+        "%s cert_generate -i %s -r %s -k %s"
+        % (ecqv_utils_path, identity, requester_pk, key_path)
+    )
+    return s.read().strip()
+
+
+def ecqv_cert_reception(ecqv_utils_path, identity, key_path, ca_pk, cert, r):
+    s = os.popen(
+        "%s cert_reception -i %s -k %s -c %s -a %s -r %s"
+        % (
+            ecqv_utils_path,
+            identity,
+            key_path,
+            ca_pk,
+            cert,
+            r,
+        )
+    )
+    return s.read().strip()
+
+
+def ecqv_cert_pk_extract(ecqv_utils_path, identity, ca_pk, cert):
+    s = os.popen(
+        "%s cert_reception -i %s -c %s -a %s"
+        % (
+            ecqv_utils_path,
+            identity,
+            ca_pk,
+            cert,
+        )
+    )
+    return s.read().strip()
 
 
 # utility code

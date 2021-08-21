@@ -14,7 +14,7 @@ import os
 from contextlib import AsyncExitStack
 import asyncclick as click
 from distmqtt.broker import create_broker
-from distmqtt.utils import read_yaml_config
+from distmqtt.utils import read_yaml_config, ecqv_pem_pk_extract
 from asyncscope import main_scope
 
 
@@ -23,7 +23,9 @@ default_config = {
     "sys_interval": 10,
     "auth": {
         "allow-anonymous": True,
-        "password-file": os.path.join(os.path.dirname(os.path.realpath(__file__)), "passwd"),
+        "password-file": os.path.join(
+            os.path.dirname(os.path.realpath(__file__)), "passwd"
+        ),
         "plugins": ["auth_file", "auth_anonymous"],
     },
     "topic-check": {"enabled": False},
@@ -36,16 +38,30 @@ logger = logging.getLogger(__name__)
 @click.version_option()
 @click.option("-c", "--config", help="Name of config file (YAML)")
 @click.option("-d", "--debug", is_flag=True, help="Debug?")
-async def main(config, debug):
+@click.option("-k", "--key", help="DH private key '.pem' file")
+@click.option("-e", "--ecqv", help="ecqv-utils program path")
+async def main(config, debug, key, ecqv):
     formatter = "[%(asctime)s] :: %(levelname)s - %(message)s"
 
     level = logging.DEBUG if debug else logging.INFO
     logging.basicConfig(level=level, format=formatter)
 
     if not config:
-        config = os.path.join(os.path.dirname(os.path.realpath(__file__)), "default_broker.yaml")
+        config = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)), "default_broker.yaml"
+        )
         logger.debug("Using default configuration")
     config = read_yaml_config(config)
+
+    if not key:
+        return
+
+    if not ecqv:
+        ecqv = os.path.join(os.path.dirname(os.path.realpath(__file__)), "ecqv-utils")
+        logger.debug("Using default configuration")
+
+    config["ecqv"] = ecqv
+    config["key_path"] = key
 
     try:
         from distkv.util import as_service

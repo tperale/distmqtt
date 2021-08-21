@@ -52,7 +52,7 @@ setup(
             #           'packet_logger_plugin = distmqtt.plugins.logging:PacketLoggerPlugin',
         ],
         "distmqtt.broker.plugins": [
-            # 'event_logger_plugin = distmqtt.plugins.logging:EventLoggerPlugin',
+            "event_logger_plugin = distmqtt.plugins.logging:EventLoggerPlugin",
             #           'packet_logger_plugin = distmqtt.plugins.logging:PacketLoggerPlugin',
             "auth_anonymous = distmqtt.plugins.authentication:AnonymousAuthPlugin",
             "auth_file = distmqtt.plugins.authentication:FileAuthPlugin",

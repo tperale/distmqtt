@@ -494,7 +494,7 @@ class Broker:
         # Wait for first packet and expect a CONNECT
         try:
             handler, client_session = await BrokerProtocolHandler.init_from_connect(
-                adapter, self.plugins_manager
+                adapter, self.plugins_manager, self.config.get("ecqv"), self.config.get("key_path")
             )
         except DistMQTTException as exc:
             self.logger.warning(
@@ -567,6 +567,7 @@ class Broker:
                 # Wait a bit may be client is reconnecting too fast
                 await anyio.sleep(1)
         await handler.mqtt_connack_authorize(authenticated)
+        # TODO Generate a CA and send it
 
         await self.plugins_manager.fire_event(
             EVENT_BROKER_CLIENT_CONNECTED, client_id=client_session.client_id

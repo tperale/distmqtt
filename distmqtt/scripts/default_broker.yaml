@@ -6,7 +6,6 @@ sys_interval: 20
 auth:
   allow-anonymous: true
 plugins:
-  - auth_file
-  - auth_anonymous
+  - event_logger_plugin
 topic-check:
   enabled: False

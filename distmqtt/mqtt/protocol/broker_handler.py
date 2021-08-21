@@ -18,7 +18,7 @@ from distmqtt.mqtt.subscribe import SubscribePacket
 from distmqtt.mqtt.suback import SubackPacket
 from distmqtt.mqtt.unsubscribe import UnsubscribePacket
 from distmqtt.mqtt.unsuback import UnsubackPacket
-from distmqtt.utils import format_client_message, create_queue
+from distmqtt.utils import format_client_message, create_queue, ecqv_cert_generate
 from distmqtt.session import Session
 from distmqtt.plugins.manager import PluginManager
 from distmqtt.adapters import StreamAdapter
@@ -44,7 +44,9 @@ class BrokerProtocolHandler(ProtocolHandler):
     async def handle_read_timeout(self):
         raise TimeoutError
 
-    async def _handle_disconnect(self, disconnect, wait=True):  # pylint: disable=arguments-differ
+    async def _handle_disconnect(
+        self, disconnect, wait=True
+    ):  # pylint: disable=arguments-differ
         self.logger.debug("Client disconnecting")
         self.clean_disconnect = False  # depending on 'disconnect' (if set)
         with anyio.fail_after(2, shield=True):
@@ -105,13 +107,25 @@ class BrokerProtocolHandler(ProtocolHandler):
 
     async def mqtt_connack_authorize(self, authorize: bool):
         if authorize:
+            # TODO Gen CA here ?
+            # ecqv_cert_generate(ecqv_utils_path, identity, requester_pk, key_path)
+            print(
+                ecqv_cert_generate(
+                    self.session.ecqv,
+                    self.session.client_id,
+                    self.session.pk,
+                    self.session.capath,
+                )
+            )
             connack = ConnackPacket.build(self.session.parent, CONNECTION_ACCEPTED)
         else:
             connack = ConnackPacket.build(self.session.parent, NOT_AUTHORIZED)
         await self._send_packet(connack)
 
     @classmethod
-    async def init_from_connect(cls, stream: StreamAdapter, plugins_manager):
+    async def init_from_connect(
+        cls, stream: StreamAdapter, plugins_manager, ecqv=None, capath=None
+    ):
         """
 
         :param stream:
@@ -130,9 +144,17 @@ class BrokerProtocolHandler(ProtocolHandler):
         if connect.payload.client_id is None:
             raise MQTTException("[[MQTT-3.1.3-3]] : Client identifier must be present")
 
+        if connect.payload.pk is None:
+            raise MQTTException("[[MQTT-3.1.3-3]] : PK must be present on connection")
+
         if connect.variable_header.will_flag:
-            if connect.payload.will_topic is None or connect.payload.will_message is None:
-                raise MQTTException("will flag set, but will topic/message not present in payload")
+            if (
+                connect.payload.will_topic is None
+                or connect.payload.will_message is None
+            ):
+                raise MQTTException(
+                    "will flag set, but will topic/message not present in payload"
+                )
 
         if connect.variable_header.reserved_flag:
             raise MQTTException("[MQTT-3.1.2-3] CONNECT reserved flag must be set to 0")
@@ -170,7 +192,9 @@ class BrokerProtocolHandler(ProtocolHandler):
             connack = ConnackPacket.build(
                 0, BAD_USERNAME_PASSWORD
             )  # [MQTT-3.2.2-4] session_parent=0
-        elif connect.clean_session_flag is False and (connect.payload.client_id_is_random):
+        elif connect.clean_session_flag is False and (
+            connect.payload.client_id_is_random
+        ):
             error_msg = (
                 "[MQTT-3.1.3-8] [MQTT-3.1.3-9] %s: No client Id provided (cleansession=0)"
                 % (format_client_message(address=remote_address, port=remote_port))
@@ -186,6 +210,9 @@ class BrokerProtocolHandler(ProtocolHandler):
 
         incoming_session = Session(plugins_manager)
         incoming_session.client_id = connect.client_id
+        incoming_session.pk = connect.payload.pk
+        incoming_session.ecqv = ecqv
+        incoming_session.capath = capath
         incoming_session.clean_session = connect.clean_session_flag
         incoming_session.will_flag = connect.will_flag
         incoming_session.will_retain = connect.will_retain_flag

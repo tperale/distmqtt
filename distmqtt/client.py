@@ -221,6 +221,7 @@ class MQTTClient:
         cafile=None,
         capath=None,
         cadata=None,
+        ecqv=None,
         extra_headers={},
     ):
         # pylint: disable=dangerous-default-value
@@ -240,7 +241,7 @@ class MQTTClient:
         :return: `CONNACK <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718033>`_ return code
         :raise: :class:`distmqtt.client.ConnectException` if connection fails
         """
-        self.session = self._initsession(uri, cleansession, cafile, capath, cadata)
+        self.session = self._initsession(uri, cleansession, cafile, capath, cadata, ecqv)
         self.extra_headers = extra_headers
         self.logger.debug("Connect to: %s", uri)
 
@@ -618,7 +619,7 @@ class MQTTClient:
         # Decode URI attributes
         uri_attributes = urlparse(self.session.broker_uri)
         scheme = uri_attributes.scheme
-        secure = True if scheme in ("mqtts", "wss") else False
+        # secure = True if scheme in ("mqtts", "wss") else False
         self.session.username = (
             self.session.username if self.session.username else uri_attributes.username
         )
@@ -646,19 +647,19 @@ class MQTTClient:
         # if not self._handler:
         self._handler = ClientProtocolHandler(self.plugins_manager)
 
-        if secure:
-            sc = ssl.create_default_context(
-                ssl.Purpose.SERVER_AUTH,
-                cafile=self.session.cafile,
-                capath=self.session.capath,
-                cadata=self.session.cadata,
-            )
-            if "certfile" in self.config and "keyfile" in self.config:
-                sc.load_cert_chain(self.config["certfile"], self.config["keyfile"])
-            if "check_hostname" in self.config and isinstance(self.config["check_hostname"], bool):
-                sc.check_hostname = self.config["check_hostname"]
-            kwargs["ssl_context"] = sc
-            kwargs["autostart_tls"] = True
+        # if secure:
+        #     sc = ssl.create_default_context(
+        #         ssl.Purpose.SERVER_AUTH,
+        #         cafile=self.session.cafile,
+        #         capath=self.session.capath,
+        #         cadata=self.session.cadata,
+        #     )
+        #     if "certfile" in self.config and "keyfile" in self.config:
+        #         sc.load_cert_chain(self.config["certfile"], self.config["keyfile"])
+        #     if "check_hostname" in self.config and isinstance(self.config["check_hostname"], bool):
+        #         sc.check_hostname = self.config["check_hostname"]
+        #     kwargs["ssl_context"] = sc
+        #     kwargs["autostart_tls"] = True
 
         try:
             adapter = None
@@ -769,7 +770,7 @@ class MQTTClient:
             cancel_tasks()
 
     def _initsession(
-        self, uri=None, cleansession=None, cafile=None, capath=None, cadata=None
+        self, uri=None, cleansession=None, cafile=None, capath=None, cadata=None, ecqv=None
     ) -> Session:
         # Load config
         broker_conf = self.config.get("broker", dict()).copy()
@@ -779,6 +780,10 @@ class MQTTClient:
             broker_conf["cafile"] = cafile
         elif "cafile" not in broker_conf:
             broker_conf["cafile"] = None
+        if ecqv:
+            broker_conf["ecqv"] = ecqv
+        elif "ecqv" not in broker_conf:
+            broker_conf["ecqv"] = None
         if capath:
             broker_conf["capath"] = capath
         elif "capath" not in broker_conf:
@@ -799,6 +804,7 @@ class MQTTClient:
         s.broker_uri = broker_conf["uri"]
         s.client_id = self.client_id
         s.cafile = broker_conf["cafile"]
+        s.ecqv = broker_conf["ecqv"]
         s.capath = broker_conf["capath"]
         s.cadata = broker_conf["cadata"]
         if cleansession is not None:

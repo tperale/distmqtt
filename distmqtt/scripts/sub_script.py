@@ -7,7 +7,7 @@ distmqtt_sub - MQTT 3.1.1 publisher
 Usage:
     distmqtt_sub --version
     distmqtt_sub (-h | --help)
-    distmqtt_sub --url BROKER_URL -t TOPIC... [-n COUNT] [-c CONFIG_FILE] [-C codec] [-i CLIENT_ID] [-q | --qos QOS] [-d] [-k KEEP_ALIVE] [--clean-session] [--ca-file CAFILE] [--ca-path CAPATH] [--ca-data CADATA] [ --will-topic WILL_TOPIC [--will-message WILL_MESSAGE] [--will-qos WILL_QOS] [--will-retain] ] [--extra-headers HEADER]
+    distmqtt_sub --url BROKER_URL -t TOPIC... [-n COUNT] [-c CONFIG_FILE] [-C codec] [-i CLIENT_ID] [-q | --qos QOS] [-d] [-k KEEP_ALIVE] [--clean-session] [--ecqv ECQVPATH] [--ca-file CAFILE] [--ca-path CAPATH] [--ca-data CADATA] [ --will-topic WILL_TOPIC [--will-message WILL_MESSAGE] [--will-qos WILL_QOS] [--will-retain] ] [--extra-headers HEADER]
 
 Options:
     -h --help           Show this screen.
@@ -21,6 +21,7 @@ Options:
     -k KEEP_ALIVE       Keep alive timeout in second
     -C codec            use this codec
     --clean-session     Clean session on connect (defaults to False)
+    --ecqv ECQV         ECQV executable path
     --ca-file CAFILE    CA file
     --ca-path CAPATH    CA Path
     --ca-data CADATA    CA data
@@ -67,7 +68,7 @@ def _get_extra_headers(arguments):
 
 
 async def do_sub(client, arguments):
-
+    print(arguments["--ecqv"])
     try:
         await client.connect(
             uri=arguments["--url"],
@@ -75,6 +76,7 @@ async def do_sub(client, arguments):
             cafile=arguments["--ca-file"],
             capath=arguments["--ca-path"],
             cadata=arguments["--ca-data"],
+            ecqv=arguments["--ecqv"],
             extra_headers=_get_extra_headers(arguments),
         )
         async with anyio.create_task_group() as tg:
