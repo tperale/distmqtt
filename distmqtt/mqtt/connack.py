@@ -61,12 +61,13 @@ class ConnackVariableHeader(MQTTVariableHeader):
 
 
 class ConnackPayload(MQTTPayload):
-    def __init__(self, ca=None, r=None):
+    def __init__(self, ca=None, r=None, pk=None):
         self.ca = ca
         self.r = r
+        self.pk = pk
 
     def __repr__(self):
-        return "ConnackPayload ca={0}, r={1}".format(self.ca, self.r)
+        return "ConnackPayload ca={0}, r={1}, pk={2}".format(self.ca, self.r, self.pk)
 
     @classmethod
     async def from_stream(
@@ -79,6 +80,7 @@ class ConnackPayload(MQTTPayload):
         #  Client identifier
         payload.ca = await decode_string(reader)
         payload.r = await decode_string(reader)
+        payload.pk = await decode_string(reader)
         return payload
 
     def to_bytes(
@@ -87,6 +89,7 @@ class ConnackPayload(MQTTPayload):
         out = bytearray()
         out.extend(encode_string(self.ca))
         out.extend(encode_string(self.r))
+        out.extend(encode_string(self.pk))
         return out
 
 
@@ -130,8 +133,8 @@ class ConnackPacket(MQTTPacket):
         self.payload = payload
 
     @classmethod
-    def build(cls, session_parent=None, return_code=None, ca=None, r=None):
+    def build(cls, session_parent=None, return_code=None, ca=None, r=None, pk=None):
         v_header = ConnackVariableHeader(session_parent, return_code)
-        payload = ConnackPayload(ca, r)
+        payload = ConnackPayload(ca, r, pk)
         packet = ConnackPacket(variable_header=v_header, payload=payload)
         return packet

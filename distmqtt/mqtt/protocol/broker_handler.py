@@ -18,7 +18,12 @@ from distmqtt.mqtt.subscribe import SubscribePacket
 from distmqtt.mqtt.suback import SubackPacket
 from distmqtt.mqtt.unsubscribe import UnsubscribePacket
 from distmqtt.mqtt.unsuback import UnsubackPacket
-from distmqtt.utils import format_client_message, create_queue, ecqv_cert_generate
+from distmqtt.utils import (
+    format_client_message,
+    create_queue,
+    ecqv_cert_generate,
+    ecqv_pem_pk_extract,
+)
 from distmqtt.session import Session
 from distmqtt.plugins.manager import PluginManager
 from distmqtt.adapters import StreamAdapter
@@ -115,8 +120,9 @@ class BrokerProtocolHandler(ProtocolHandler):
                 self.session.pk,
                 self.session.capath,
             )
+            pk = ecqv_pem_pk_extract(self.session.ecqv, self.session.capath)
             connack = ConnackPacket.build(
-                self.session.parent, CONNECTION_ACCEPTED, ca, r
+                self.session.parent, CONNECTION_ACCEPTED, ca, r, pk
             )
         else:
             connack = ConnackPacket.build(self.session.parent, NOT_AUTHORIZED)

@@ -14,7 +14,12 @@ from distmqtt.mqtt.connect import ConnectVariableHeader, ConnectPayload, Connect
 from distmqtt.mqtt.connack import ConnackPacket
 from distmqtt.session import Session
 from distmqtt.plugins.manager import PluginManager
-from distmqtt.utils import Future, create_queue, ecqv_pem_pk_extract
+from distmqtt.utils import (
+    Future,
+    create_queue,
+    ecqv_pem_pk_extract,
+    ecqv_cert_reception,
+)
 
 
 class ClientProtocolHandler(ProtocolHandler):
@@ -74,6 +79,16 @@ class ClientProtocolHandler(ProtocolHandler):
         connack = await ConnackPacket.from_stream(self.stream)
         self.logger.debug("< C %r", connack)
         # TODO Store the certificate
+        print(
+            ecqv_cert_reception(
+                self.session.ecqv,
+                self.session.client_id,
+                self.session.capath,
+                connack.payload.pk,
+                connack.payload.ca,
+                connack.payload.r,
+            )
+        )
         await self.plugins_manager.fire_event(
             EVENT_MQTT_PACKET_RECEIVED, packet=connack, session=self.session
         )
