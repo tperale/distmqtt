@@ -148,6 +148,10 @@ class Session:
         self.cafile = None
         self.ecqv = None
         self.pk = None
+        self.cert = None
+        self.r = None
+        self.broker_pk = None
+        self.cert_priv_key = None
         self.capath = None
         self.cadata = None
         self._packet_id = 0

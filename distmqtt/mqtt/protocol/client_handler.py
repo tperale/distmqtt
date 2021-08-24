@@ -78,16 +78,16 @@ class ClientProtocolHandler(ProtocolHandler):
         await self._send_packet(connect_packet)
         connack = await ConnackPacket.from_stream(self.stream)
         self.logger.debug("< C %r", connack)
-        # TODO Store the certificate
-        print(
-            ecqv_cert_reception(
-                self.session.ecqv,
-                self.session.client_id,
-                self.session.capath,
-                connack.payload.pk,
-                connack.payload.ca,
-                connack.payload.r,
-            )
+        self.session.broker_pk = connack.payload.pk
+        self.session.cert = connack.payload.ca
+        self.session.r = connack.payload.r
+        self.session.cert_priv_key = ecqv_cert_reception(
+            self.session.ecqv,
+            self.session.client_id,
+            self.session.capath,
+            connack.payload.pk,
+            connack.payload.ca,
+            connack.payload.r,
         )
         await self.plugins_manager.fire_event(
             EVENT_MQTT_PACKET_RECEIVED, packet=connack, session=self.session
