@@ -163,8 +163,6 @@ class ConnectPayload(MQTTPayload):
         self,
         client_id=None,
         pk=None,
-        r=None,
-        cert=None,
         will_topic=None,
         will_message=None,
         username=None,
@@ -178,8 +176,6 @@ class ConnectPayload(MQTTPayload):
         self.username = username
         self.password = password
         self.pk = pk
-        self.r = r
-        self.cert = cert
 
     def __repr__(self):
         return "ConnectVariableHeader(client_id={0}, will_topic={1}, will_message={2}, username={3}, password={4}, pk={5}, r={6}, cert={7})".format(
@@ -250,10 +246,6 @@ class ConnectPayload(MQTTPayload):
         out.extend(encode_string(self.client_id))
         if self.pk:
             out.extend(encode_string(self.pk))
-        if self.r:
-            out.extend(encode_string(self.r))
-        if self.cert:
-            out.extend(encode_string(self.cert))
         # Will topic / message
         if variable_header.will_flag:
             out.extend(encode_string(self.will_topic))

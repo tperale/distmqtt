@@ -6,8 +6,14 @@ from distmqtt.mqtt.packet import (
     MQTTPacket,
     MQTTFixedHeader,
     MQTTVariableHeader,
+    MQTTPayload,
 )
-from distmqtt.codecs import read_or_raise
+from distmqtt.codecs import (
+    decode_data_with_length,
+    decode_string,
+    encode_string,
+    read_or_raise,
+)
 from distmqtt.errors import DistMQTTException
 from distmqtt.adapters import StreamAdapter
 
@@ -54,9 +60,39 @@ class ConnackVariableHeader(MQTTVariableHeader):
         )
 
 
+class ConnackPayload(MQTTPayload):
+    def __init__(self, ca=None, r=None):
+        self.ca = ca
+        self.r = r
+
+    def __repr__(self):
+        return "ConnackPayload ca={0}, r={1}".format(self.ca, self.r)
+
+    @classmethod
+    async def from_stream(
+        cls,
+        reader: StreamAdapter,
+        fixed_header: MQTTFixedHeader,
+        variable_header: ConnackVariableHeader,
+    ):
+        payload = cls()
+        #  Client identifier
+        payload.ca = await decode_string(reader)
+        payload.r = await decode_string(reader)
+        return payload
+
+    def to_bytes(
+        self, fixed_header: MQTTFixedHeader, variable_header: ConnackVariableHeader
+    ):
+        out = bytearray()
+        out.extend(encode_string(self.ca))
+        out.extend(encode_string(self.r))
+        return out
+
+
 class ConnackPacket(MQTTPacket):
     VARIABLE_HEADER = ConnackVariableHeader
-    PAYLOAD = None
+    PAYLOAD = ConnackPayload
 
     @property
     def return_code(self):
@@ -85,15 +121,17 @@ class ConnackPacket(MQTTPacket):
         else:
             if fixed.packet_type != CONNACK:
                 raise DistMQTTException(
-                    "Invalid fixed packet type %s for ConnackPacket init" % fixed.packet_type
+                    "Invalid fixed packet type %s for ConnackPacket init"
+                    % fixed.packet_type
                 )
             header = fixed
         super().__init__(header)
         self.variable_header = variable_header
-        self.payload = None
+        self.payload = payload
 
     @classmethod
-    def build(cls, session_parent=None, return_code=None):
+    def build(cls, session_parent=None, return_code=None, ca=None, r=None):
         v_header = ConnackVariableHeader(session_parent, return_code)
-        packet = ConnackPacket(variable_header=v_header)
+        payload = ConnackPayload(ca, r)
+        packet = ConnackPacket(variable_header=v_header, payload=payload)
         return packet

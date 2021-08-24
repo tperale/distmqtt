@@ -60,7 +60,7 @@ def ecqv_cert_generate(ecqv_utils_path, identity, requester_pk, key_path):
         "%s cert_generate -i %s -r %s -k %s"
         % (ecqv_utils_path, identity, requester_pk, key_path)
     )
-    return s.read().strip()
+    return s.read().strip().split("\n")
 
 
 def ecqv_cert_reception(ecqv_utils_path, identity, key_path, ca_pk, cert, r):

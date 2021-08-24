@@ -109,15 +109,15 @@ class BrokerProtocolHandler(ProtocolHandler):
         if authorize:
             # TODO Gen CA here ?
             # ecqv_cert_generate(ecqv_utils_path, identity, requester_pk, key_path)
-            print(
-                ecqv_cert_generate(
-                    self.session.ecqv,
-                    self.session.client_id,
-                    self.session.pk,
-                    self.session.capath,
-                )
+            ca, r = ecqv_cert_generate(
+                self.session.ecqv,
+                self.session.client_id,
+                self.session.pk,
+                self.session.capath,
             )
-            connack = ConnackPacket.build(self.session.parent, CONNECTION_ACCEPTED)
+            connack = ConnackPacket.build(
+                self.session.parent, CONNECTION_ACCEPTED, ca, r
+            )
         else:
             connack = ConnackPacket.build(self.session.parent, NOT_AUTHORIZED)
         await self._send_packet(connack)
