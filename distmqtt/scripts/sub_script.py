@@ -22,6 +22,7 @@ Options:
     -C codec            use this codec
     --clean-session     Clean session on connect (defaults to False)
     --ecqv ECQV         ECQV executable path
+    --g-path  GFILE     G number .pem file
     --ca-file CAFILE    CA file
     --ca-path CAPATH    CA Path
     --ca-data CADATA    CA data
@@ -68,7 +69,6 @@ def _get_extra_headers(arguments):
 
 
 async def do_sub(client, arguments):
-    print(arguments["--ecqv"])
     try:
         await client.connect(
             uri=arguments["--url"],
@@ -76,6 +76,7 @@ async def do_sub(client, arguments):
             cafile=arguments["--ca-file"],
             capath=arguments["--ca-path"],
             cadata=arguments["--ca-data"],
+            g=arguments["--g-path"],
             ecqv=arguments["--ecqv"],
             extra_headers=_get_extra_headers(arguments),
         )

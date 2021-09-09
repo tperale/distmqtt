@@ -221,6 +221,7 @@ class MQTTClient:
         cafile=None,
         capath=None,
         cadata=None,
+        g=None,
         ecqv=None,
         extra_headers={},
     ):
@@ -241,7 +242,7 @@ class MQTTClient:
         :return: `CONNACK <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718033>`_ return code
         :raise: :class:`distmqtt.client.ConnectException` if connection fails
         """
-        self.session = self._initsession(uri, cleansession, cafile, capath, cadata, ecqv)
+        self.session = self._initsession(uri, cleansession, cafile, capath, cadata, g, ecqv)
         self.extra_headers = extra_headers
         self.logger.debug("Connect to: %s", uri)
 
@@ -770,7 +771,7 @@ class MQTTClient:
             cancel_tasks()
 
     def _initsession(
-        self, uri=None, cleansession=None, cafile=None, capath=None, cadata=None, ecqv=None
+        self, uri=None, cleansession=None, cafile=None, capath=None, cadata=None, g=None, ecqv=None
     ) -> Session:
         # Load config
         broker_conf = self.config.get("broker", dict()).copy()
@@ -784,6 +785,10 @@ class MQTTClient:
             broker_conf["ecqv"] = ecqv
         elif "ecqv" not in broker_conf:
             broker_conf["ecqv"] = None
+        if g:
+            broker_conf["g"] = g
+        elif "g" not in broker_conf:
+            broker_conf["g"] = None
         if capath:
             broker_conf["capath"] = capath
         elif "capath" not in broker_conf:
@@ -804,6 +809,7 @@ class MQTTClient:
         s.broker_uri = broker_conf["uri"]
         s.client_id = self.client_id
         s.cafile = broker_conf["cafile"]
+        s.g = broker_conf["g"]
         s.ecqv = broker_conf["ecqv"]
         s.capath = broker_conf["capath"]
         s.cadata = broker_conf["cadata"]
