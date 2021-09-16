@@ -567,7 +567,8 @@ class Broker:
                 # Wait a bit may be client is reconnecting too fast
                 await anyio.sleep(1)
         await handler.mqtt_connack_authorize(authenticated)
-        # TODO Generate a CA and send it
+        # TODO Receive ECQV confirmation
+        await handler.mqtt_confirmation_reception(adapter)
 
         await self.plugins_manager.fire_event(
             EVENT_BROKER_CLIENT_CONNECTED, client_id=client_session.client_id

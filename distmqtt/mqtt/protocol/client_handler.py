@@ -11,6 +11,7 @@ from distmqtt.mqtt.suback import SubackPacket
 from distmqtt.mqtt.unsubscribe import UnsubscribePacket
 from distmqtt.mqtt.unsuback import UnsubackPacket
 from distmqtt.mqtt.connect import ConnectVariableHeader, ConnectPayload, ConnectPacket
+from distmqtt.mqtt.confirmation import ConfirmationPacket
 from distmqtt.mqtt.connack import ConnackPacket
 from distmqtt.session import Session
 from distmqtt.plugins.manager import PluginManager
@@ -19,6 +20,7 @@ from distmqtt.utils import (
     create_queue,
     ecqv_pem_pk_extract,
     ecqv_cert_reception,
+    ecqv_generate_confirmation,
 )
 
 
@@ -73,6 +75,17 @@ class ClientProtocolHandler(ProtocolHandler):
         packet = ConnectPacket(vh=vh, payload=payload)
         return packet
 
+    def _build_confirmation_packet(self):
+        pk = ecqv_pem_pk_extract(self.session.ecqv, self.session.g)
+        verify = ecqv_generate_confirmation(
+            self.session.ecqv,
+            self.session.capath,
+            self.session.cert_priv_key,
+            self.session.g,
+        )
+        packet = ConfirmationPacket.build(verify, pk)
+        return packet
+
     async def mqtt_connect(self):
         connect_packet = self._build_connect_packet()
         await self._send_packet(connect_packet)
@@ -92,6 +105,9 @@ class ClientProtocolHandler(ProtocolHandler):
         await self.plugins_manager.fire_event(
             EVENT_MQTT_PACKET_RECEIVED, packet=connack, session=self.session
         )
+        # TODO Confirmation packet here
+        confirm_packet = self._build_confirmation_packet()
+        await self._send_packet(confirm_packet)
         return connack.return_code
 
     async def handle_write_timeout(self):

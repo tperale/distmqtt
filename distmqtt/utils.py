@@ -46,7 +46,7 @@ def read_yaml_config(config_file):
 
 
 def ecqv_pem_pk_extract(ecqv_utils_path, key_path):
-    s = os.popen("%s ca_public_key -k %s" % (ecqv_utils_path, key_path))
+    s = os.popen("%s pk_extract -c %s" % (ecqv_utils_path, key_path))
     return s.read().strip()
 
 
@@ -76,6 +76,49 @@ def ecqv_cert_reception(ecqv_utils_path, identity, key_path, ca_pk, cert, r):
         )
     )
     return s.read().strip()
+
+
+def ecqv_generate_confirmation(ecqv_utils_path, ca_pk, cert_priv_key, g_path):
+    s = os.popen(
+        "%s generate_confirmation -c %s -d %s -g %s"
+        % (
+            ecqv_utils_path,
+            ca_pk,
+            cert_priv_key,
+            g_path,
+        )
+    )
+    return s.read().strip()
+
+
+def ecqv_verify_confirmation(ecqv_utils_path, verify, cert_pk, g_path):
+    s = os.popen(
+        "%s verify_confirmation -v %s -d %s -g %s"
+        % (
+            ecqv_utils_path,
+            verify,
+            cert_pk,
+            g_path,
+        )
+    )
+    response = s.read().strip().split()
+    return response[0] == response[1]
+
+
+def ecqv_group_generate(ecqv_utils_path, ca_path, ids, g_pks, cert_pks, verify_numbers):
+    s = os.popen(
+        "%s group_generate -c %s -i %s -g %s -d %s -v %s"
+        % (
+            ecqv_utils_path,
+            ca_path,
+            ",".join(ids),
+            ",".join(g_pks),
+            ",".join(cert_pks),
+            ",".join(verify_numbers),
+        )
+    )
+    response = s.read().strip().split()
+    return response[0] == response[1]
 
 
 def ecqv_cert_pk_extract(ecqv_utils_path, identity, ca_pk, cert):

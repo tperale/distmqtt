@@ -18,6 +18,7 @@ from distmqtt.mqtt.subscribe import SubscribePacket
 from distmqtt.mqtt.suback import SubackPacket
 from distmqtt.mqtt.unsubscribe import UnsubscribePacket
 from distmqtt.mqtt.unsuback import UnsubackPacket
+from distmqtt.mqtt.confirmation import ConfirmationPacket
 from distmqtt.utils import (
     format_client_message,
     create_queue,
@@ -113,7 +114,6 @@ class BrokerProtocolHandler(ProtocolHandler):
     async def mqtt_connack_authorize(self, authorize: bool):
         if authorize:
             # TODO Gen CA here ?
-            # ecqv_cert_generate(ecqv_utils_path, identity, requester_pk, key_path)
             ca, r = ecqv_cert_generate(
                 self.session.ecqv,
                 self.session.client_id,
@@ -127,6 +127,10 @@ class BrokerProtocolHandler(ProtocolHandler):
         else:
             connack = ConnackPacket.build(self.session.parent, NOT_AUTHORIZED)
         await self._send_packet(connack)
+
+    async def mqtt_confirmation_reception(self, stream: StreamAdapter):
+        confirmation = await ConfirmationPacket.from_stream(stream)
+        return confirmation
 
     @classmethod
     async def init_from_connect(

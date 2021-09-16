@@ -7,7 +7,7 @@ distmqtt_sub - MQTT 3.1.1 publisher
 Usage:
     distmqtt_sub --version
     distmqtt_sub (-h | --help)
-    distmqtt_sub --url BROKER_URL -t TOPIC... [-n COUNT] [-c CONFIG_FILE] [-C codec] [-i CLIENT_ID] [-q | --qos QOS] [-d] [-k KEEP_ALIVE] [--clean-session] [--ecqv ECQVPATH] [--ca-file CAFILE] [--ca-path CAPATH] [--ca-data CADATA] [ --will-topic WILL_TOPIC [--will-message WILL_MESSAGE] [--will-qos WILL_QOS] [--will-retain] ] [--extra-headers HEADER]
+    distmqtt_sub --url BROKER_URL -t TOPIC... [-n COUNT] [-c CONFIG_FILE] [-C codec] [-i CLIENT_ID] [-q | --qos QOS] [-d] [-k KEEP_ALIVE] [--clean-session] [--ecqv ECQVPATH] [--g-path GPATH] [--ca-file CAFILE] [--ca-path CAPATH] [--ca-data CADATA] [ --will-topic WILL_TOPIC [--will-message WILL_MESSAGE] [--will-qos WILL_QOS] [--will-retain] ] [--extra-headers HEADER]
 
 Options:
     -h --help           Show this screen.
@@ -22,7 +22,7 @@ Options:
     -C codec            use this codec
     --clean-session     Clean session on connect (defaults to False)
     --ecqv ECQV         ECQV executable path
-    --g-path  GFILE     G number .pem file
+    --g-path GPATH      G number .pem file
     --ca-file CAFILE    CA file
     --ca-path CAPATH    CA Path
     --ca-data CADATA    CA data
