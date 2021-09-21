@@ -24,6 +24,9 @@ from distmqtt.utils import (
     create_queue,
     ecqv_cert_generate,
     ecqv_pem_pk_extract,
+    ecqv_cert_pk_extract,
+    ecqv_verify_confirmation,
+    ecqv_group_generate,
 )
 from distmqtt.session import Session
 from distmqtt.plugins.manager import PluginManager
@@ -124,13 +127,27 @@ class BrokerProtocolHandler(ProtocolHandler):
             connack = ConnackPacket.build(
                 self.session.parent, CONNECTION_ACCEPTED, ca, r, pk
             )
+            ca_pk = ecqv_pem_pk_extract(self.session.ecqv, self.session.capath)
+            self.session.cert = ecqv_cert_pk_extract(
+                self.session.ecqv, self.session.client_id, ca_pk, ca
+            )
         else:
             connack = ConnackPacket.build(self.session.parent, NOT_AUTHORIZED)
         await self._send_packet(connack)
 
     async def mqtt_confirmation_reception(self, stream: StreamAdapter):
         confirmation = await ConfirmationPacket.from_stream(stream)
+        self.session.verif = confirmation.payload.verif
+        self.session.g = confirmation.payload.g_pk
         return confirmation
+
+    def mqtt_group_generation(self, ids, g_pks, cert_pks, verify_numbers):
+        ecqv_verify_confirmation(
+            self.session.ecqv, self.session.verif, self.session.cert, self.session.g
+        )
+        # ecqv_group_generate(
+        #     self.session.ecqv, self.session.capath, ids, g_pks, cert_pks, verify_numbers
+        # )
 
     @classmethod
     async def init_from_connect(

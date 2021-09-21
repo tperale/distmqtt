@@ -118,12 +118,12 @@ def ecqv_group_generate(ecqv_utils_path, ca_path, ids, g_pks, cert_pks, verify_n
         )
     )
     response = s.read().strip().split()
-    return response[0] == response[1]
+    return tuple(response)
 
 
 def ecqv_cert_pk_extract(ecqv_utils_path, identity, ca_pk, cert):
     s = os.popen(
-        "%s cert_reception -i %s -c %s -a %s"
+        "%s cert_pk_extract -i %s -c %s -a %s"
         % (
             ecqv_utils_path,
             identity,

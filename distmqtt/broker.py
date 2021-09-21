@@ -20,7 +20,7 @@ from distmqtt.session import Session, EVENT_BROKER_MESSAGE_RECEIVED  # noqa: F40
 # EVENT_BROKER_MESSAGE_RECEIVED is re-exported
 from distmqtt.mqtt.protocol.broker_handler import BrokerProtocolHandler
 from distmqtt.errors import DistMQTTException, MQTTException
-from distmqtt.utils import format_client_message, gen_client_id, Future, match_topic
+from distmqtt.utils import format_client_message, gen_client_id, Future, match_topic, ecqv_group_generate
 from distmqtt.mqtt.constants import QOS_0
 from distmqtt.adapters import StreamAdapter, BaseAdapter, WebSocketsAdapter
 from .plugins.manager import PluginManager, BaseContext
@@ -224,6 +224,7 @@ class Broker:
         self._init_states()
         self._sessions = dict()
         self._subscriptions = dict()
+        self._group_keys = dict()
 
         self._broadcast_queue_s, self._broadcast_queue_r = anyio.create_memory_object_stream(100)
         self._tg = tg
@@ -289,6 +290,7 @@ class Broker:
         try:
             self._sessions = dict()
             self._subscriptions = dict()
+            self._group_keys = dict()
             if self._do_retain:
                 self._retained_messages = dict()
             self.transitions.start()
@@ -429,6 +431,7 @@ class Broker:
 
         self._sessions = dict()
         self._subscriptions = dict()
+        self._group_keys = dict()
         if self._do_retain:
             self._retained_messages = dict()
         try:
@@ -569,6 +572,7 @@ class Broker:
         await handler.mqtt_connack_authorize(authenticated)
         # TODO Receive ECQV confirmation
         await handler.mqtt_confirmation_reception(adapter)
+        # handler.mqtt_group_generation()
 
         await self.plugins_manager.fire_event(
             EVENT_BROKER_CLIENT_CONNECTED, client_id=client_session.client_id
@@ -604,9 +608,25 @@ class Broker:
                     subscriptions = await handler.get_next_pending_subscription()
                     self.logger.debug("%s handling subscription", client_session.client_id)
                     return_codes = []
+                    group_keys = []
                     for subscription in subscriptions["topics"]:
                         result = await self.add_subscription(subscription, client_session)
                         return_codes.append(result)
+                        # TODO Generate the group key
+                        a_filter = tuple(subscription[0].split("/"))
+                        subs = self._subscriptions[a_filter]
+
+                        ids = [sess.client_id for sess, qos in subs]
+                        g_pks = [sess.g for sess, qos in subs]
+                        cert_pks = [sess.cert for sess, qos in subs]
+                        verify_numbers = [sess.verif for sess, qos in subs]
+                        group = ecqv_group_generate(subs[0][0].ecqv, subs[0][0].capath, ids, g_pks, cert_pks, verify_numbers)
+                        self._group_keys[a_filter] = tuple(group)
+                        group_keys.append(group)
+
+                    # TODO When the the subscription is approved it's maybe the time to create the
+                    # group key for each publisher/subs
+                    # Should add the group key to the payload of the acknowledgement subscription
                     await handler.mqtt_acknowledge_subscription(
                         subscriptions["packet_id"], return_codes
                     )

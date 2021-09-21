@@ -151,6 +151,7 @@ class Session:
         self.cert = None
         self.r = None
         self.g = None
+        self.verif = None
         self.broker_pk = None
         self.cert_priv_key = None
         self.capath = None
