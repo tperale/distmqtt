@@ -106,8 +106,8 @@ class BrokerProtocolHandler(ProtocolHandler):
         unsubscription = await self._pending_unsubscriptions.get()
         return unsubscription
 
-    async def mqtt_acknowledge_subscription(self, packet_id, return_codes):
-        suback = SubackPacket.build(packet_id, return_codes)
+    async def mqtt_acknowledge_subscription(self, packet_id, return_codes, group_keys):
+        suback = SubackPacket.build(packet_id, return_codes, group_keys)
         await self._send_packet(suback)
 
     async def mqtt_acknowledge_unsubscription(self, packet_id):
@@ -139,15 +139,10 @@ class BrokerProtocolHandler(ProtocolHandler):
         confirmation = await ConfirmationPacket.from_stream(stream)
         self.session.verif = confirmation.payload.verif
         self.session.g = confirmation.payload.g_pk
-        return confirmation
 
-    def mqtt_group_generation(self, ids, g_pks, cert_pks, verify_numbers):
-        ecqv_verify_confirmation(
+        return ecqv_verify_confirmation(
             self.session.ecqv, self.session.verif, self.session.cert, self.session.g
         )
-        # ecqv_group_generate(
-        #     self.session.ecqv, self.session.capath, ids, g_pks, cert_pks, verify_numbers
-        # )
 
     @classmethod
     async def init_from_connect(

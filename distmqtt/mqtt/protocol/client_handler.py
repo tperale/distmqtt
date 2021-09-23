@@ -138,18 +138,17 @@ class ClientProtocolHandler(ProtocolHandler):
             await self._send_packet(subscribe)
 
             # Wait for SUBACK is received
-            return_codes = await waiter.get()
-
+            suback = await waiter.get()
         finally:
             del self._subscriptions_waiter[packet_id]
-        return return_codes
+        return suback
 
     async def handle_suback(self, suback: SubackPacket):
         packet_id = suback.variable_header.packet_id
         try:
             waiter = self._subscriptions_waiter.get(packet_id)
             if waiter is not None:
-                await waiter.set(suback.payload.return_codes)
+                await waiter.set(suback.payload)
         except KeyError:
             self.logger.warning(
                 "Received SUBACK for unknown pending subscription with Id: %s",
