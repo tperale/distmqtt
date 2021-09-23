@@ -570,9 +570,9 @@ class Broker:
                 # Wait a bit may be client is reconnecting too fast
                 await anyio.sleep(1)
         await handler.mqtt_connack_authorize(authenticated)
-        # TODO Receive ECQV confirmation
-        await handler.mqtt_confirmation_reception(adapter)
-        # handler.mqtt_group_generation()
+        # Receive ECQV confirmation number
+        if not await handler.mqtt_confirmation_reception(adapter):
+            print("verification failed")
 
         await self.plugins_manager.fire_event(
             EVENT_BROKER_CLIENT_CONNECTED, client_id=client_session.client_id
@@ -628,7 +628,7 @@ class Broker:
                     # group key for each publisher/subs
                     # Should add the group key to the payload of the acknowledgement subscription
                     await handler.mqtt_acknowledge_subscription(
-                        subscriptions["packet_id"], return_codes
+                        subscriptions["packet_id"], return_codes, group_keys
                     )
                     for index, subscription in enumerate(subscriptions["topics"]):
                         if return_codes[index] != 0x80:

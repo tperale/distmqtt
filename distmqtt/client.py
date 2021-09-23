@@ -204,6 +204,7 @@ class MQTTClient:
         self._disconnect_task = None
         self._connected_state = anyio.Event()
         self._no_more_connections = anyio.Event()
+        self._topics_keys = dict()
         self.extra_headers = {}
         self.codec = get_codec(codec, config=self.config)
 
@@ -238,6 +239,8 @@ class MQTTClient:
         :param cafile: server certificate authority file (optional, used for secured connection)
         :param capath: server certificate authority path (optional, used for secured connection)
         :param cadata: server certificate authority data (optional, used for secured connection)
+        :param ecqv:
+        :param g:
         :param extra_headers: a dictionary with additional http headers that should be sent on the initial connection (optional, used only with websocket connections)
         :return: `CONNACK <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718033>`_ return code
         :raise: :class:`distmqtt.client.ConnectException` if connection fails
@@ -412,7 +415,14 @@ class MQTTClient:
                 ('$SYS/broker/load/#', QOS_2),
             ]
         """
-        return await self._handler.mqtt_subscribe(topics, self.session.next_packet_id)
+        suback = await self._handler.mqtt_subscribe(topics, self.session.next_packet_id)
+
+        for topic, keys in zip(topics, suback.group_keys):
+            a_filter, _ = topic
+            pk, k = keys
+            self._topics_keys[a_filter] = keys
+
+        return suback.return_codes
 
     @mqtt_connected
     async def unsubscribe(self, topics):
@@ -495,6 +505,8 @@ class MQTTClient:
                     raise RuntimeError("Overflow. Please resubscribe.")
                 message = await self._q.get()
                 message.data = self.codec.decode(message.publish_packet.data)
+                # TODO This is where the incoming messages get retrieved
+                # TODO This is where I should use my key to decrypt the message
                 return message
 
             async def __len__(self):
@@ -530,6 +542,9 @@ class MQTTClient:
             clients.topic = tuple(topic.split("/"))
             clients.qos = handler.qos
             await self.subscribe([(topic, handler.qos)])
+            # TODO this function is called from the "Subscription" class
+            # retrieve the group key from the suback message and put it in the handler
+            # (subscription class)
         elif clients.qos < handler.qos:
             clients.qos = handler.qos
             await self.subscribe([(topic, handler.qos)])
@@ -713,6 +728,7 @@ class MQTTClient:
                     topics.append(("/".join(s.topic), s.qos))
                 if topics:
                     await self.subscribe(topics)
+                    # TODO handle the keys for receiving messages
             self.logger.debug(
                 "connected to %s:%s",
                 self.session.remote_address,
