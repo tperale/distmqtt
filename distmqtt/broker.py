@@ -612,7 +612,6 @@ class Broker:
                     for subscription in subscriptions["topics"]:
                         result = await self.add_subscription(subscription, client_session)
                         return_codes.append(result)
-                        # TODO Generate the group key
                         a_filter = tuple(subscription[0].split("/"))
                         subs = self._subscriptions[a_filter]
 
@@ -622,11 +621,10 @@ class Broker:
                         verify_numbers = [sess.verif for sess, qos in subs]
                         group = ecqv_group_generate(subs[0][0].ecqv, subs[0][0].capath, ids, g_pks, cert_pks, verify_numbers)
                         self._group_keys[a_filter] = tuple(group)
+                        # TODO in the future it will not be required to pass the PUBLIC KEY
+                        # TODO each group keys should be encrypted in the future
                         group_keys.append(group)
 
-                    # TODO When the the subscription is approved it's maybe the time to create the
-                    # group key for each publisher/subs
-                    # Should add the group key to the payload of the acknowledgement subscription
                     await handler.mqtt_acknowledge_subscription(
                         subscriptions["packet_id"], return_codes, group_keys
                     )

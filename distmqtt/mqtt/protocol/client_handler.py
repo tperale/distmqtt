@@ -79,7 +79,7 @@ class ClientProtocolHandler(ProtocolHandler):
         pk = ecqv_pem_pk_extract(self.session.ecqv, self.session.g)
         verify = ecqv_generate_confirmation(
             self.session.ecqv,
-            self.session.capath,
+            self.session.broker_pk,
             self.session.cert_priv_key,
             self.session.g,
         )
@@ -105,7 +105,6 @@ class ClientProtocolHandler(ProtocolHandler):
         await self.plugins_manager.fire_event(
             EVENT_MQTT_PACKET_RECEIVED, packet=connack, session=self.session
         )
-        # TODO Confirmation packet here
         confirm_packet = self._build_confirmation_packet()
         await self._send_packet(confirm_packet)
         return connack.return_code

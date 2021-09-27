@@ -116,7 +116,6 @@ class BrokerProtocolHandler(ProtocolHandler):
 
     async def mqtt_connack_authorize(self, authorize: bool):
         if authorize:
-            # TODO Gen CA here ?
             ca, r = ecqv_cert_generate(
                 self.session.ecqv,
                 self.session.client_id,
@@ -137,12 +136,15 @@ class BrokerProtocolHandler(ProtocolHandler):
 
     async def mqtt_confirmation_reception(self, stream: StreamAdapter):
         confirmation = await ConfirmationPacket.from_stream(stream)
-        self.session.verif = confirmation.payload.verif
         self.session.g = confirmation.payload.g_pk
-
-        return ecqv_verify_confirmation(
-            self.session.ecqv, self.session.verif, self.session.cert, self.session.g
+        self.session.verif = ecqv_verify_confirmation(
+            self.session.ecqv,
+            confirmation.payload.verif,
+            self.session.cert,
+            self.session.g,
+            self.session.capath,
         )
+        return self.session.verif is not None
 
     @classmethod
     async def init_from_connect(

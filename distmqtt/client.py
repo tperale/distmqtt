@@ -418,6 +418,7 @@ class MQTTClient:
         suback = await self._handler.mqtt_subscribe(topics, self.session.next_packet_id)
 
         for topic, keys in zip(topics, suback.group_keys):
+            # TODO In the future the PRIV KEY should get decrypted here.
             a_filter, _ = topic
             pk, k = keys
             self._topics_keys[a_filter] = keys
@@ -728,7 +729,6 @@ class MQTTClient:
                     topics.append(("/".join(s.topic), s.qos))
                 if topics:
                     await self.subscribe(topics)
-                    # TODO handle the keys for receiving messages
             self.logger.debug(
                 "connected to %s:%s",
                 self.session.remote_address,

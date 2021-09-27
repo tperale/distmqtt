@@ -88,21 +88,25 @@ def ecqv_generate_confirmation(ecqv_utils_path, ca_pk, cert_priv_key, g_path):
             g_path,
         )
     )
-    return s.read().strip()
+    return "".join(s.read().strip().split())
 
 
-def ecqv_verify_confirmation(ecqv_utils_path, verify, cert_pk, g_path):
+def ecqv_verify_confirmation(ecqv_utils_path, verify, cert_pk, g_pk, ca_path):
     s = os.popen(
-        "%s verify_confirmation -v %s -d %s -g %s"
+        "%s verify_confirmation -v %s -d %s -g %s -k %s"
         % (
             ecqv_utils_path,
             verify,
             cert_pk,
-            g_path,
+            g_pk,
+            ca_path,
         )
     )
     response = s.read().strip().split()
-    return response[0] == response[1]
+    if len(response) and (response[0] == response[1]):
+        return response[0]
+    else:
+        return None
 
 
 def ecqv_group_generate(ecqv_utils_path, ca_path, ids, g_pks, cert_pks, verify_numbers):
