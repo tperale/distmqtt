@@ -77,7 +77,7 @@ async def do_sub(client, arguments):
             capath=arguments["--ca-path"],
             cadata=arguments["--ca-data"],
             g=arguments["--g-path"],
-            ecqv=arguments["--ecqv"],
+            ecqv=os.path.abspath(arguments["--ecqv"]),
             extra_headers=_get_extra_headers(arguments),
         )
         async with anyio.create_task_group() as tg:
