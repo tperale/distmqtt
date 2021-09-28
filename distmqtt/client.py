@@ -393,6 +393,9 @@ class MQTTClient:
                 retain = self.config["topics"][topic]["retain"]
             except KeyError:
                 retain = self.config["default_retain"]
+        # TODO This is the function used by the 'publish' script to post a message
+        # This function does not goes through the subscription process and then does
+        # not generate the 'group' keys needed.
         return await self._handler.mqtt_publish(topic, message, qos, retain)
 
     @mqtt_connected
