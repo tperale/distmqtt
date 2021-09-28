@@ -7,7 +7,7 @@ distmqtt_pub - MQTT 3.1.1 publisher
 Usage:
     distmqtt_pub --version
     distmqtt_pub (-h | --help)
-    distmqtt_pub --url BROKER_URL -t TOPIC (-f FILE | -l | -m MESSAGE | -M message | -n | -s | -S) [-C codec] [-c CONFIG_FILE] [-i CLIENT_ID] [-q | --qos QOS] [-d] [-k KEEP_ALIVE] [--clean-session] [--ca-file CAFILE] [--ca-path CAPATH] [--ca-data CADATA] [ --will-topic WILL_TOPIC [--will-message WILL_MESSAGE] [--will-qos WILL_QOS] [--will-retain] ] [--extra-headers HEADER] [-r]
+    distmqtt_pub --url BROKER_URL -t TOPIC (-f FILE | -l | -m MESSAGE | -M message | -n | -s | -S) [-C codec] [-c CONFIG_FILE] [-i CLIENT_ID] [-q | --qos QOS] [-d] [-k KEEP_ALIVE] [--clean-session] [--ecqv ECQVPATH] [--g-path GPATH] [--ca-file CAFILE] [--ca-path CAPATH] [--ca-data CADATA] [ --will-topic WILL_TOPIC [--will-message WILL_MESSAGE] [--will-qos WILL_QOS] [--will-retain] ] [--extra-headers HEADER] [-r]
 
 Options:
     -h --help           Show this screen.
@@ -26,6 +26,8 @@ Options:
     -C codec            Codec to send the result with (default: UTF8-encode)
     -k KEEP_ALIVE       Keep alive timeout in second
     --clean-session     Clean session on connect (defaults to False)
+    --ecqv ECQV         ECQV executable path
+    --g-path GPATH      G number .pem file
     --ca-file CAFILE    CA file
     --ca-path CAPATH    CA Path
     --ca-data CADATA    CA data
@@ -114,6 +116,8 @@ async def do_pub(client, arguments):
         cafile=arguments["--ca-file"],
         capath=arguments["--ca-path"],
         cadata=arguments["--ca-data"],
+        g=arguments["--g-path"],
+        ecqv=arguments["--ecqv"],
         extra_headers=_get_extra_headers(arguments),
     )
     try:
