@@ -398,6 +398,13 @@ class MQTTClient:
         # not generate the 'group' keys needed.
         return await self._handler.mqtt_publish(topic, message, qos, retain)
 
+    async def _update_loop(self, handler, topic):
+        while True:
+            sa = await handler.mqtt_key_update(topic)
+            for k in sa.group_keys:
+                self._topics_keys[topic] = k
+                print("Updated : ", self._topics_keys[topic])
+
     @mqtt_connected
     async def subscribe(self, topics):
         """
@@ -425,6 +432,7 @@ class MQTTClient:
             a_filter, _ = topic
             pk, k = keys
             self._topics_keys[a_filter] = keys
+            self._tg.start_soon(self._update_loop, self._handler, a_filter)
 
         return suback.return_codes
 

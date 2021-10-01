@@ -30,6 +30,7 @@ class ClientProtocolHandler(ProtocolHandler):
         self._ping_task = None
         self._pingresp_queue = create_queue(9999)
         self._subscriptions_waiter = dict()
+        self._update_waiter = dict()
         self._unsubscriptions_waiter = dict()
         self._disconnect_waiter = None
 
@@ -142,11 +143,26 @@ class ClientProtocolHandler(ProtocolHandler):
             del self._subscriptions_waiter[packet_id]
         return suback
 
+    async def mqtt_key_update(self, topic):
+        waiter = Future()
+        self._update_waiter[topic] = waiter
+        try:
+            # Wait for SUBACK is received
+            suback = await waiter.get()
+        finally:
+            del self._update_waiter[topic]
+        return suback
+
     async def handle_suback(self, suback: SubackPacket):
         packet_id = suback.variable_header.packet_id
         try:
             waiter = self._subscriptions_waiter.get(packet_id)
-            if waiter is not None:
+            if waiter is None:
+                # TODO MATCH the topic with the current updater process
+                for t in suback.payload.topics:
+                    waiter = self._update_waiter.get(t)
+                    await waiter.set(suback.payload)
+            else:
                 await waiter.set(suback.payload)
         except KeyError:
             self.logger.warning(
