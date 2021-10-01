@@ -30,10 +30,11 @@ class SubackPayload(MQTTPayload):
     RETURN_CODE_02 = 0x02
     RETURN_CODE_80 = 0x80
 
-    def __init__(self, return_codes=(), group_keys=[]):
+    def __init__(self, return_codes=(), group_keys=[], topics=[]):
         super().__init__()
         self.return_codes = return_codes
         self.group_keys = group_keys
+        self.topics = topics
 
     def __repr__(self):
         return type(self).__name__ + "(return_codes={0})".format(
@@ -44,6 +45,9 @@ class SubackPayload(MQTTPayload):
         self, fixed_header: MQTTFixedHeader, variable_header: MQTTVariableHeader
     ):
         out = bytearray()
+        out.extend(int_to_bytes(len(self.group_keys), 1))
+        for t in self.topics:
+            out.extend(encode_string(t))
         for pk, k in self.group_keys:
             out.extend(encode_string(pk))
             out.extend(encode_string(k))
@@ -61,23 +65,28 @@ class SubackPayload(MQTTPayload):
     ):
         return_codes = []
         group_keys = []
+        topics = []
 
-        bytes_to_read = fixed_header.remaining_length - variable_header.bytes_length
+        topic_num_byte = await read_or_raise(reader, 1)
+        topic_num = bytes_to_int(topic_num_byte)
 
-        while len(group_keys) != bytes_to_read:
+        for _ in range(topic_num):
+            t = await decode_string(reader)
+            topics.append(t)
+
+        for _ in range(topic_num):
             pk = await decode_string(reader)
             k = await decode_string(reader)
             group_keys.append((pk, k))
-            bytes_to_read -= len(pk.encode("utf-8")) + 2 + len(k.encode("utf-8")) + 2
 
-        for _ in range(0, bytes_to_read):
+        for _ in range(topic_num):
             try:
                 return_code_byte = await read_or_raise(reader, 1)
                 return_code = bytes_to_int(return_code_byte)
                 return_codes.append(return_code)
             except NoDataException:
                 break
-        return cls(return_codes, group_keys)
+        return cls(return_codes, group_keys, topics)
 
 
 class SubackPacket(MQTTPacket):
@@ -105,7 +114,7 @@ class SubackPacket(MQTTPacket):
         self.payload = payload
 
     @classmethod
-    def build(cls, packet_id, return_codes, group_keys):
+    def build(cls, packet_id, return_codes, group_keys, topics):
         variable_header = cls.VARIABLE_HEADER(packet_id)
-        payload = cls.PAYLOAD(return_codes, group_keys)
+        payload = cls.PAYLOAD(return_codes, group_keys, topics)
         return cls(variable_header=variable_header, payload=payload)

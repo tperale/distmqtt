@@ -106,8 +106,10 @@ class BrokerProtocolHandler(ProtocolHandler):
         unsubscription = await self._pending_unsubscriptions.get()
         return unsubscription
 
-    async def mqtt_acknowledge_subscription(self, packet_id, return_codes, group_keys):
-        suback = SubackPacket.build(packet_id, return_codes, group_keys)
+    async def mqtt_acknowledge_subscription(
+        self, packet_id, return_codes, group_keys, topics
+    ):
+        suback = SubackPacket.build(packet_id, return_codes, group_keys, topics)
         await self._send_packet(suback)
 
     async def mqtt_acknowledge_unsubscription(self, packet_id):

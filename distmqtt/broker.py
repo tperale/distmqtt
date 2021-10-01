@@ -626,8 +626,9 @@ class Broker:
                             if sess.client_id == client_session.client_id:
                                 continue
                             handler_ = self._get_handler(sess)
+                            print("sub", subscription[0])
                             await handler_.mqtt_acknowledge_subscription(
-                                0, [0], group
+                                0, [0], [group], [subscription[0]]
                             )
 
                         # TODO in the future it will not be required to pass the PUBLIC KEY
@@ -635,7 +636,7 @@ class Broker:
                         group_keys.append(group)
 
                     await handler.mqtt_acknowledge_subscription(
-                        subscriptions["packet_id"], return_codes, group_keys
+                        subscriptions["packet_id"], return_codes, group_keys, [t for t, _ in subscriptions["topics"]]
                     )
                     for index, subscription in enumerate(subscriptions["topics"]):
                         if return_codes[index] != 0x80:
