@@ -625,8 +625,8 @@ class Broker:
                         for sess, _ in subs:
                             if sess.client_id == client_session.client_id:
                                 continue
-                            handler = self._get_handler(sess)
-                            await handler.mqtt_acknowledge_subscription(
+                            handler_ = self._get_handler(sess)
+                            await handler_.mqtt_acknowledge_subscription(
                                 0, [0], group
                             )
 
