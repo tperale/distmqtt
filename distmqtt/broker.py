@@ -614,10 +614,10 @@ class Broker:
                         return_codes.append(result)
                         a_filter = tuple(subscription[0].split("/"))
                         subs = self._subscriptions[a_filter]
-                        ids = [sess.client_id for sess, qos in subs]
-                        g_pks = [sess.g for sess, qos in subs]
-                        cert_pks = [sess.cert for sess, qos in subs]
-                        verify_numbers = [sess.verif for sess, qos in subs]
+                        ids = [sess.client_id for sess, _ in subs]
+                        g_pks = [sess.g for sess, _ in subs]
+                        cert_pks = [sess.cert for sess, _ in subs]
+                        verify_numbers = [sess.verif for sess, _ in subs]
                         group = ecqv_group_generate(subs[0][0].ecqv, subs[0][0].capath, ids, g_pks, cert_pks, verify_numbers)
                         self._group_keys[a_filter] = tuple(group)
 
@@ -626,10 +626,10 @@ class Broker:
                             if sess.client_id == client_session.client_id:
                                 continue
                             handler_ = self._get_handler(sess)
-                            print("sub", subscription[0])
-                            await handler_.mqtt_acknowledge_subscription(
-                                0, [0], [group], [subscription[0]]
-                            )
+                            if handler_ is not None:
+                                await handler_.mqtt_acknowledge_subscription(
+                                    0, [0], [group], [subscription[0]]
+                                )
 
                         # TODO in the future it will not be required to pass the PUBLIC KEY
                         # TODO each group keys should be encrypted in the future
