@@ -54,6 +54,9 @@ class ClientProtocolHandler(ProtocolHandler):
         payload.client_id = self.session.client_id
         payload.pk = ecqv_pem_pk_extract(self.session.ecqv, self.session.capath)
 
+        if self.session.is_subscriber:
+            vh.is_subscriber_flag = True
+
         if self.session.username:
             vh.username_flag = True
             payload.username = self.session.username

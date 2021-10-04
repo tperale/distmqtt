@@ -30,6 +30,7 @@ class ConnectVariableHeader(MQTTVariableHeader):
     USERNAME_FLAG = 0x80
     PASSWORD_FLAG = 0x40
     WILL_RETAIN_FLAG = 0x20
+    IS_SUBS_FLAG = 0x10
     WILL_FLAG = 0x04
     WILL_QOS_MASK = 0x18
     CLEAN_SESSION_FLAG = 0x02
@@ -84,6 +85,14 @@ class ConnectVariableHeader(MQTTVariableHeader):
     @will_retain_flag.setter
     def will_retain_flag(self, val: bool):
         self._set_flag(val, self.WILL_RETAIN_FLAG)
+
+    @property
+    def is_subscriber_flag(self) -> bool:
+        return self._get_flag(self.IS_SUBS_FLAG)
+
+    @is_subscriber_flag.setter
+    def is_subscriber_flag(self, val: bool):
+        self._set_flag(val, self.IS_SUBS_FLAG)
 
     @property
     def will_flag(self) -> bool:
@@ -178,7 +187,7 @@ class ConnectPayload(MQTTPayload):
         self.pk = pk
 
     def __repr__(self):
-        return "ConnectVariableHeader(client_id={0}, will_topic={1}, will_message={2}, username={3}, password={4}, pk={5}, r={6}, cert={7})".format(
+        return "ConnectPayload(client_id={0}, will_topic={1}, will_message={2}, username={3}, password={4}, pk={5}, r={6}, cert={7})".format(
             self.client_id,
             self.will_topic,
             self.will_message,
@@ -335,6 +344,14 @@ class ConnectPacket(MQTTPacket):
     @reserved_flag.setter
     def reserved_flag(self, flag):
         self.variable_header.reserved_flag = flag
+
+    @property
+    def is_subs(self):
+        return self.variable_header.is_subscriber_flag
+
+    @is_subs.setter
+    def is_subs(self, flag):
+        self.variable_header.is_subscriber_flag = flag
 
     @property
     def client_id(self):

@@ -225,6 +225,7 @@ class MQTTClient:
         g=None,
         ecqv=None,
         extra_headers={},
+        subscriber=True,
     ):
         # pylint: disable=dangerous-default-value
         """
@@ -245,7 +246,7 @@ class MQTTClient:
         :return: `CONNACK <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718033>`_ return code
         :raise: :class:`distmqtt.client.ConnectException` if connection fails
         """
-        self.session = self._initsession(uri, cleansession, cafile, capath, cadata, g, ecqv)
+        self.session = self._initsession(uri, cleansession, cafile, capath, cadata, g, ecqv, subscriber)
         self.extra_headers = extra_headers
         self.logger.debug("Connect to: %s", uri)
 
@@ -798,7 +799,7 @@ class MQTTClient:
             cancel_tasks()
 
     def _initsession(
-        self, uri=None, cleansession=None, cafile=None, capath=None, cadata=None, g=None, ecqv=None
+        self, uri=None, cleansession=None, cafile=None, capath=None, cadata=None, g=None, ecqv=None, subscriber=True
     ) -> Session:
         # Load config
         broker_conf = self.config.get("broker", dict()).copy()
@@ -833,6 +834,7 @@ class MQTTClient:
                 raise ClientException("Missing connection parameter '%s'" % key)
 
         s = Session(self.plugins_manager)
+        s.is_subscriber = subscriber
         s.broker_uri = broker_conf["uri"]
         s.client_id = self.client_id
         s.cafile = broker_conf["cafile"]

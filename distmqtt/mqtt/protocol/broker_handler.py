@@ -245,6 +245,7 @@ class BrokerProtocolHandler(ProtocolHandler):
         incoming_session.will_qos = connect.will_qos
         incoming_session.will_topic = connect.will_topic
         incoming_session.will_message = connect.will_message
+        incoming_session.is_subscriber = connect.is_subs
         incoming_session.username = connect.username
         incoming_session.password = connect.password
         if connect.keep_alive > 0:

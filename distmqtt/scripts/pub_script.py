@@ -119,6 +119,7 @@ async def do_pub(client, arguments):
         g=arguments["--g-path"],
         ecqv=arguments["--ecqv"],
         extra_headers=_get_extra_headers(arguments),
+        subscriber=False,
     )
     try:
         qos = _get_qos(arguments)

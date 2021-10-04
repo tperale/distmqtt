@@ -140,6 +140,7 @@ class Session:
         self.will_qos = None
         self.will_retain = None
         self.will_topic = None
+        self.is_subscriber = None
         self.keep_alive = 0
         self.publish_retry_delay = 0
         self.broker_uri = None
