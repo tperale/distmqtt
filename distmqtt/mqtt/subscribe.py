@@ -7,7 +7,6 @@ from distmqtt.mqtt.packet import (
     MQTTPacket,
     MQTTFixedHeader,
     SUBSCRIBE,
-    PacketIdVariableHeader,
     MQTTPayload,
     MQTTVariableHeader,
 )
@@ -15,10 +14,39 @@ from distmqtt.errors import DistMQTTException, NoDataException
 from distmqtt.codecs import (
     bytes_to_int,
     decode_string,
+    decode_packet_id,
     encode_string,
     int_to_bytes,
     read_or_raise,
 )
+
+
+class SubscribeHeader(MQTTVariableHeader):
+
+    __slots__ = ("packet_id", "is_subs")
+
+    def __init__(self, packet_id, is_subs):
+        super().__init__()
+        self.packet_id = packet_id
+        self.is_subs = is_subs
+
+    def to_bytes(self):
+        out = b""
+        out += int_to_bytes(self.packet_id, 2)
+        out += int_to_bytes(self.is_subs, 1)
+        return out
+
+    @classmethod
+    async def from_stream(cls, reader, fixed_header: MQTTFixedHeader):
+        packet_id = await decode_packet_id(reader)
+        is_subs_byte = await read_or_raise(reader, 1)
+        is_subs = bytes_to_int(is_subs_byte)
+        return cls(packet_id, is_subs)
+
+    def __repr__(self):
+        return type(self).__name__ + "(packet_id={0}, is_subs={1})".format(
+            self.packet_id, self.is_subs
+        )
 
 
 class SubscribePayload(MQTTPayload):
@@ -29,7 +57,9 @@ class SubscribePayload(MQTTPayload):
         super().__init__()
         self.topics = topics
 
-    def to_bytes(self, fixed_header: MQTTFixedHeader, variable_header: MQTTVariableHeader):
+    def to_bytes(
+        self, fixed_header: MQTTFixedHeader, variable_header: MQTTVariableHeader
+    ):
         out = b""
         for topic in self.topics:
             out += encode_string(topic[0])
@@ -62,13 +92,13 @@ class SubscribePayload(MQTTPayload):
 
 
 class SubscribePacket(MQTTPacket):
-    VARIABLE_HEADER = PacketIdVariableHeader
+    VARIABLE_HEADER = SubscribeHeader
     PAYLOAD = SubscribePayload
 
     def __init__(
         self,
         fixed: MQTTFixedHeader = None,
-        variable_header: PacketIdVariableHeader = None,
+        variable_header: SubscribeHeader = None,
         payload=None,
     ):
         if fixed is None:
@@ -76,7 +106,8 @@ class SubscribePacket(MQTTPacket):
         else:
             if fixed.packet_type != SUBSCRIBE:
                 raise DistMQTTException(
-                    "Invalid fixed packet type %s for SubscribePacket init" % fixed.packet_type
+                    "Invalid fixed packet type %s for SubscribePacket init"
+                    % fixed.packet_type
                 )
             header = fixed
 
@@ -85,7 +116,7 @@ class SubscribePacket(MQTTPacket):
         self.payload = payload
 
     @classmethod
-    def build(cls, topics, packet_id):
-        v_header = PacketIdVariableHeader(packet_id)
+    def build(cls, topics, packet_id, is_subs=True):
+        v_header = cls.VARIABLE_HEADER(packet_id, is_subs)
         payload = SubscribePayload(topics)
         return SubscribePacket(variable_header=v_header, payload=payload)

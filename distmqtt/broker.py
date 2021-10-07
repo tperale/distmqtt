@@ -224,6 +224,7 @@ class Broker:
         self._init_states()
         self._sessions = dict()
         self._subscriptions = dict()
+        self._publishers = dict()
         self._group_keys = dict()
 
         self._broadcast_queue_s, self._broadcast_queue_r = anyio.create_memory_object_stream(100)
@@ -290,6 +291,7 @@ class Broker:
         try:
             self._sessions = dict()
             self._subscriptions = dict()
+            self._publishers = dict()
             self._group_keys = dict()
             if self._do_retain:
                 self._retained_messages = dict()
@@ -431,6 +433,7 @@ class Broker:
 
         self._sessions = dict()
         self._subscriptions = dict()
+        self._publishers = dict()
         self._group_keys = dict()
         if self._do_retain:
             self._retained_messages = dict()
@@ -610,10 +613,13 @@ class Broker:
                     return_codes = []
                     group_keys = []
                     for subscription in subscriptions["topics"]:
-                        result = await self.add_subscription(subscription, client_session)
+                        result = await self.add_subscription(subscription, client_session, self._subscriptions if subscriptions['is_subs'] else self._publishers)
                         return_codes.append(result)
                         a_filter = tuple(subscription[0].split("/"))
-                        subs = self._subscriptions[a_filter]
+                        if subscriptions['is_subs']:
+                            subs = self._subscriptions[a_filter]
+                        else:
+                            subs = self._publishers[a_filter]
                         ids = [sess.client_id for sess, _ in subs]
                         g_pks = [sess.g for sess, _ in subs]
                         cert_pks = [sess.cert for sess, _ in subs]
@@ -788,7 +794,7 @@ class Broker:
                 self.logger.debug("Retaining %s:‹deleted›", topic_name)
                 del self._retained_messages[topic_name]
 
-    async def add_subscription(self, subscription, session):
+    async def add_subscription(self, subscription, session, subs):
         a_filter = subscription[0]
         if "#" in a_filter and not a_filter.endswith("#"):
             # [MQTT-4.7.1-2] Wildcard character '#' is only allowed as last character in filter
@@ -808,14 +814,14 @@ class Broker:
         qos = subscription[1]
         if "max-qos" in self.config and qos > self.config["max-qos"]:
             qos = self.config["max-qos"]
-        if a_filter not in self._subscriptions:
-            self._subscriptions[a_filter] = []
+        if a_filter not in subs:
+            subs[a_filter] = []
         already_subscribed = next(
-            (s for (s, qos) in self._subscriptions[a_filter] if s.client_id == session.client_id),
+            (s for (s, qos) in subs[a_filter] if s.client_id == session.client_id),
             None,
         )
         if not already_subscribed:
-            self._subscriptions[a_filter].append((session, qos))
+            subs[a_filter].append((session, qos))
         else:
             if self.logger.isEnabledFor(logging.DEBUG):
                 self.logger.debug(
@@ -836,7 +842,7 @@ class Broker:
         if isinstance(a_filter, str):
             a_filter = tuple(a_filter.split("/"))
         try:
-            subscriptions = self._subscriptions[a_filter]
+            subscriptions = subs[a_filter]
             for index, (sub_session, _) in enumerate(
                 subscriptions
             ):  # pylint: disable=unused-variable

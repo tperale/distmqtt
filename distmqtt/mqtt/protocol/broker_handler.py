@@ -85,6 +85,7 @@ class BrokerProtocolHandler(ProtocolHandler):
     async def handle_subscribe(self, subscribe: SubscribePacket):
         subscription = {
             "packet_id": subscribe.variable_header.packet_id,
+            "is_subs": subscribe.variable_header.is_subs,
             "topics": subscribe.payload.topics,
         }
         await self._pending_subscriptions.put(subscription)
