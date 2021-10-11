@@ -46,6 +46,7 @@ import os
 import json
 import socket
 from distmqtt.client import open_mqttclient, ConnectException, _codecs
+from distmqtt.mqtt.constants import QOS_0
 from distmqtt.version import get_version
 from docopt import docopt
 from distmqtt.utils import read_yaml_config
@@ -61,11 +62,10 @@ def _gen_client_id():
 
 
 def _get_qos(arguments):
-    # try:
-    #     return int(arguments["--qos"])
-    # except Exception:
-    #     return None
-    return None
+    try:
+        return int(arguments["--qos"])
+    except Exception:
+        return QOS_0
 
 
 def _get_extra_headers(arguments):
@@ -126,6 +126,7 @@ async def do_pub(client, arguments):
         topic = arguments["-t"]
         retain = arguments["-r"]
         async with anyio.create_task_group() as tg:
+            await client.publisher_subs(topic, qos)
             for message in _get_message(arguments):
                 logger.info("%s Publishing to '%s'", client.client_id, topic)
                 tg.start_soon(client.publish, topic, message, qos, retain)
