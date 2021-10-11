@@ -9,6 +9,7 @@ from distmqtt.mqtt.packet import (
     SUBSCRIBE,
     MQTTPayload,
     MQTTVariableHeader,
+    PacketIdVariableHeader,
 )
 from distmqtt.errors import DistMQTTException, NoDataException
 from distmqtt.codecs import (
@@ -19,34 +20,6 @@ from distmqtt.codecs import (
     int_to_bytes,
     read_or_raise,
 )
-
-
-class SubscribeHeader(MQTTVariableHeader):
-
-    __slots__ = ("packet_id", "is_subs")
-
-    def __init__(self, packet_id, is_subs):
-        super().__init__()
-        self.packet_id = packet_id
-        self.is_subs = is_subs
-
-    def to_bytes(self):
-        out = b""
-        out += int_to_bytes(self.packet_id, 2)
-        out += int_to_bytes(self.is_subs, 1)
-        return out
-
-    @classmethod
-    async def from_stream(cls, reader, fixed_header: MQTTFixedHeader):
-        packet_id = await decode_packet_id(reader)
-        is_subs_byte = await read_or_raise(reader, 1)
-        is_subs = bytes_to_int(is_subs_byte)
-        return cls(packet_id, is_subs)
-
-    def __repr__(self):
-        return type(self).__name__ + "(packet_id={0}, is_subs={1})".format(
-            self.packet_id, self.is_subs
-        )
 
 
 class SubscribePayload(MQTTPayload):
@@ -92,13 +65,13 @@ class SubscribePayload(MQTTPayload):
 
 
 class SubscribePacket(MQTTPacket):
-    VARIABLE_HEADER = SubscribeHeader
+    VARIABLE_HEADER = PacketIdVariableHeader
     PAYLOAD = SubscribePayload
 
     def __init__(
         self,
         fixed: MQTTFixedHeader = None,
-        variable_header: SubscribeHeader = None,
+        variable_header: PacketIdVariableHeader = None,
         payload=None,
     ):
         if fixed is None:
@@ -116,7 +89,7 @@ class SubscribePacket(MQTTPacket):
         self.payload = payload
 
     @classmethod
-    def build(cls, topics, packet_id, is_subs=True):
-        v_header = cls.VARIABLE_HEADER(packet_id, is_subs)
+    def build(cls, topics, packet_id):
+        v_header = cls.VARIABLE_HEADER(packet_id)
         payload = SubscribePayload(topics)
         return SubscribePacket(variable_header=v_header, payload=payload)
