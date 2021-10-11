@@ -225,7 +225,8 @@ class Broker:
         self._sessions = dict()
         self._subscriptions = dict()
         self._publishers = dict()
-        self._group_keys = dict()
+        self._group_keys_subs = dict()
+        self._group_keys_pubs = dict()
 
         self._broadcast_queue_s, self._broadcast_queue_r = anyio.create_memory_object_stream(100)
         self._tg = tg
@@ -292,7 +293,8 @@ class Broker:
             self._sessions = dict()
             self._subscriptions = dict()
             self._publishers = dict()
-            self._group_keys = dict()
+            self._group_keys_subs = dict()
+            self._group_keys_pubs = dict()
             if self._do_retain:
                 self._retained_messages = dict()
             self.transitions.start()
@@ -434,7 +436,8 @@ class Broker:
         self._sessions = dict()
         self._subscriptions = dict()
         self._publishers = dict()
-        self._group_keys = dict()
+        self._group_keys_subs = dict()
+        self._group_keys_pubs = dict()
         if self._do_retain:
             self._retained_messages = dict()
         try:
@@ -592,13 +595,25 @@ class Broker:
 
         # Init and start loop for handling client messages (publish, subscribe/unsubscribe, disconnect)
         async with anyio.create_task_group() as tg:
+            def generate_group_key(subs):
+                ids = [sess.client_id for sess, _ in subs]
+                g_pks = [sess.g for sess, _ in subs]
+                cert_pks = [sess.cert for sess, _ in subs]
+                verify_numbers = [sess.verif for sess, _ in subs]
+                group = ecqv_group_generate(subs[0][0].ecqv, subs[0][0].capath, ids, g_pks, cert_pks, verify_numbers)
+                return group
 
             async def handle_unsubscribe():
                 while True:
                     unsubscription = await handler.get_next_pending_unsubscription()
                     self.logger.debug("%s handling unsubscription", client_session.client_id)
                     for topic in unsubscription["topics"]:
-                        self._del_subscription(topic, client_session)
+                        subs = self._subscriptions if client_session.is_subscriber else self._publishers
+                        self._del_subscription(topic, client_session, subs)
+                        gk = generate_group_key(subs)
+                        gk_list = self._group_keys_subs if client_session.is_subscriber else self._group_keys_pubs
+                        gk_list[topic] = gk
+                        # TODO send update key packet
                         await self.plugins_manager.fire_event(
                             EVENT_BROKER_CLIENT_UNSUBSCRIBED,
                             client_id=client_session.client_id,
@@ -613,33 +628,29 @@ class Broker:
                     return_codes = []
                     group_keys = []
                     for subscription in subscriptions["topics"]:
-                        result = await self.add_subscription(subscription, client_session, self._subscriptions if subscriptions['is_subs'] else self._publishers)
+                        subs = self._subscriptions if client_session.is_subscriber else self._publishers
+                        result = await self.add_subscription(subscription, client_session, subs)
                         return_codes.append(result)
                         a_filter = tuple(subscription[0].split("/"))
-                        if subscriptions['is_subs']:
-                            subs = self._subscriptions[a_filter]
+                        gk = generate_group_key(subs[a_filter])
+                        if client_session.is_subscriber:
+                            self._group_keys_subs[a_filter] = tuple(gk)
                         else:
-                            subs = self._publishers[a_filter]
-                        ids = [sess.client_id for sess, _ in subs]
-                        g_pks = [sess.g for sess, _ in subs]
-                        cert_pks = [sess.cert for sess, _ in subs]
-                        verify_numbers = [sess.verif for sess, _ in subs]
-                        group = ecqv_group_generate(subs[0][0].ecqv, subs[0][0].capath, ids, g_pks, cert_pks, verify_numbers)
-                        self._group_keys[a_filter] = tuple(group)
+                            self._group_keys_pubs[a_filter] = tuple(gk)
 
                         # TODO Send the newly generated group key to each subscriber of the topic
-                        for sess, _ in subs:
+                        for sess, _ in subs[a_filter]:
                             if sess.client_id == client_session.client_id:
                                 continue
                             handler_ = self._get_handler(sess)
                             if handler_ is not None:
                                 await handler_.mqtt_acknowledge_subscription(
-                                    0, [0], [group], [subscription[0]]
+                                    0, [0], [gk], [subscription[0]]
                                 )
 
                         # TODO in the future it will not be required to pass the PUBLIC KEY
                         # TODO each group keys should be encrypted in the future
-                        group_keys.append(group)
+                        group_keys.append(gk)
 
                     await handler.mqtt_acknowledge_subscription(
                         subscriptions["packet_id"], return_codes, group_keys, [t for t, _ in subscriptions["topics"]]
@@ -831,7 +842,7 @@ class Broker:
                 )
         return qos
 
-    def _del_subscription(self, a_filter, session):
+    def _del_subscription(self, a_filter, session, subs):
         """
         Delete a session subscription on a given topic
         :param a_filter:
@@ -869,7 +880,7 @@ class Broker:
         """
         filter_queue = deque()
         for topic in self._subscriptions:
-            if self._del_subscription(topic, session):
+            if self._del_subscription(topic, session, self._subscriptions):
                 filter_queue.append(topic)
         for topic in filter_queue:
             if not self._subscriptions[topic]:
