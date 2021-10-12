@@ -437,6 +437,21 @@ class MQTTClient:
 
         return suback.return_codes
 
+    async def publisher_subs(self, topic, qos):
+        """
+        """
+        suback = await self._handler.mqtt_subscribe([(topic, qos)], self.session.next_packet_id, False)
+
+        for t , keys in zip([topic], suback.group_keys):
+            # TODO In the future the PRIV KEY should get decrypted here.
+            print(keys)
+            # a_filter, _ = t
+            # pk, k = keys
+            # self._topics_keys[a_filter] = keys
+            # self._tg.start_soon(self._update_loop, self._handler, a_filter)
+
+        return suback.return_codes
+
     @mqtt_connected
     async def unsubscribe(self, topics):
         """
