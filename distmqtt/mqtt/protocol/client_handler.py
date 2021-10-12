@@ -161,7 +161,6 @@ class ClientProtocolHandler(ProtocolHandler):
         try:
             waiter = self._subscriptions_waiter.get(packet_id)
             if waiter is None:
-                # TODO MATCH the topic with the current updater process
                 for t in suback.payload.topics:
                     waiter = self._update_waiter.get(t)
                     await waiter.set(suback.payload)

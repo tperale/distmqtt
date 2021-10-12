@@ -613,7 +613,7 @@ class Broker:
                         gk = generate_group_key(subs)
                         gk_list = self._group_keys_subs if client_session.is_subscriber else self._group_keys_pubs
                         gk_list[topic] = gk
-                        # TODO send update key packet
+                        # TODO send update key packet to the pubsubs
                         await self.plugins_manager.fire_event(
                             EVENT_BROKER_CLIENT_UNSUBSCRIBED,
                             client_id=client_session.client_id,
@@ -638,18 +638,20 @@ class Broker:
                         else:
                             self._group_keys_pubs[a_filter] = tuple(gk)
 
-                        # TODO Send the newly generated group key to each subscriber of the topic
+                        # Sending the newly generated group key to each subscriber of the topic in a suback packet
                         for sess, _ in subs[a_filter]:
                             if sess.client_id == client_session.client_id:
                                 continue
                             handler_ = self._get_handler(sess)
                             if handler_ is not None:
+                                # TODO Send the correct public and private key combo to the pub/sub
+                                # - If we have a new publisher subs: send back the subscriber group
+                                #   private key and the public key of the publishers.
                                 await handler_.mqtt_acknowledge_subscription(
                                     0, [0], [gk], [subscription[0]]
                                 )
 
-                        # TODO in the future it will not be required to pass the PUBLIC KEY
-                        # TODO each group keys should be encrypted in the future
+                        # TODO each group keys should be encrypted to be sent back
                         group_keys.append(gk)
 
                     await handler.mqtt_acknowledge_subscription(
@@ -697,6 +699,7 @@ class Broker:
                             retain=client_session.will_retain,
                         )
                 self.logger.debug("%s Disconnecting session", client_session.client_id)
+                # TODO remove the gk here if no unsubscribe packet was received
                 await self._stop_handler(handler)
                 client_session.transitions.disconnect()
                 await self.plugins_manager.fire_event(

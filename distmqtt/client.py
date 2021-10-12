@@ -394,9 +394,7 @@ class MQTTClient:
                 retain = self.config["topics"][topic]["retain"]
             except KeyError:
                 retain = self.config["default_retain"]
-        # TODO This is the function used by the 'publish' script to post a message
-        # This function does not goes through the subscription process and then does
-        # not generate the 'group' keys needed.
+        # TODO Published message should be encrypted with the gk of the recipient
         return await self._handler.mqtt_publish(topic, message, qos, retain)
 
     async def _update_loop(self, handler, topic):
@@ -429,7 +427,7 @@ class MQTTClient:
         suback = await self._handler.mqtt_subscribe(topics, self.session.next_packet_id)
 
         for topic, keys in zip(topics, suback.group_keys):
-            # TODO In the future the PRIV KEY should get decrypted here.
+            # TODO The GK should get decrypted here once they are sent encrypted.
             a_filter, _ = topic
             pk, k = keys
             self._topics_keys[a_filter] = keys
@@ -440,10 +438,9 @@ class MQTTClient:
     async def publisher_subs(self, topic, qos):
         """
         """
-        suback = await self._handler.mqtt_subscribe([(topic, qos)], self.session.next_packet_id, False)
+        suback = await self._handler.mqtt_subscribe([(topic, qos)], self.session.next_packet_id)
 
         for t , keys in zip([topic], suback.group_keys):
-            # TODO In the future the PRIV KEY should get decrypted here.
             print(keys)
             # a_filter, _ = t
             # pk, k = keys
@@ -570,9 +567,6 @@ class MQTTClient:
             clients.topic = tuple(topic.split("/"))
             clients.qos = handler.qos
             await self.subscribe([(topic, handler.qos)])
-            # TODO this function is called from the "Subscription" class
-            # retrieve the group key from the suback message and put it in the handler
-            # (subscription class)
         elif clients.qos < handler.qos:
             clients.qos = handler.qos
             await self.subscribe([(topic, handler.qos)])
