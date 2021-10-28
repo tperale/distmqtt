@@ -45,19 +45,26 @@ def read_yaml_config(config_file):
     return config
 
 
-def ecqv_pem_pk_extract(ecqv_utils_path, key_path):
-    s = os.popen("%s pk_extract -c %s" % (ecqv_utils_path, key_path))
+def ecqv_pk_extract(ecqv_utils_path, priv):
+    s = os.popen('%s pk_extract -k "%s"' % (ecqv_utils_path, priv))
+    return s.read().strip()
+
+
+def ecqv_priv_extract(ecqv_utils_path, priv):
+    s = os.popen('%s priv_extract -k "%s"' % (ecqv_utils_path, priv))
     return s.read().strip()
 
 
 def ecqv_cert_request(ecqv_utils_path, identity, key_path):
-    s = os.popen("%s cert_request -i %s -r %s" % (ecqv_utils_path, identity, key_path))
+    s = os.popen(
+        '%s cert_request -i "%s" -k "%s"' % (ecqv_utils_path, identity, key_path)
+    )
     return s.read().strip()
 
 
 def ecqv_cert_generate(ecqv_utils_path, identity, requester_pk, key_path):
     s = os.popen(
-        "%s cert_generate -i %s -r %s -k %s"
+        '%s cert_generate -i "%s" -r "%s" -k "%s"'
         % (ecqv_utils_path, identity, requester_pk, key_path)
     )
     return s.read().strip().split("\n")
@@ -65,7 +72,7 @@ def ecqv_cert_generate(ecqv_utils_path, identity, requester_pk, key_path):
 
 def ecqv_cert_reception(ecqv_utils_path, identity, key_path, ca_pk, cert, r):
     s = os.popen(
-        "%s cert_reception -i %s -k %s -c %s -a %s -r %s"
+        '%s cert_reception -i "%s" -k "%s" -c "%s" -a "%s" -r "%s"'
         % (
             ecqv_utils_path,
             identity,
@@ -80,7 +87,7 @@ def ecqv_cert_reception(ecqv_utils_path, identity, key_path, ca_pk, cert, r):
 
 def ecqv_generate_confirmation(ecqv_utils_path, ca_pk, cert_priv_key, g_path):
     s = os.popen(
-        "%s generate_confirmation -c %s -d %s -g %s"
+        '%s generate_confirmation -c "%s" -d "%s" -g "%s"'
         % (
             ecqv_utils_path,
             ca_pk,
@@ -93,7 +100,7 @@ def ecqv_generate_confirmation(ecqv_utils_path, ca_pk, cert_priv_key, g_path):
 
 def ecqv_verify_confirmation(ecqv_utils_path, verify, cert_pk, g_pk, ca_path):
     s = os.popen(
-        "%s verify_confirmation -v %s -d %s -g %s -k %s"
+        '%s verify_confirmation -v "%s" -d "%s" -g "%s" -k "%s"'
         % (
             ecqv_utils_path,
             verify,
@@ -102,16 +109,15 @@ def ecqv_verify_confirmation(ecqv_utils_path, verify, cert_pk, g_pk, ca_path):
             ca_path,
         )
     )
-    response = s.read().strip().split()
-    if len(response) and (response[0] == response[1]):
-        return response[0]
-    else:
-        return None
+    response = s.read().strip()
+    if len(response):
+        return response
+    return None
 
 
 def ecqv_group_generate(ecqv_utils_path, ca_path, ids, g_pks, cert_pks, verify_numbers):
     s = os.popen(
-        "%s group_generate -c %s -i %s -g %s -d %s -v %s"
+        '%s group_generate -c "%s" -i "%s" -g "%s" -d "%s" -v "%s"'
         % (
             ecqv_utils_path,
             ca_path,
@@ -127,7 +133,7 @@ def ecqv_group_generate(ecqv_utils_path, ca_path, ids, g_pks, cert_pks, verify_n
 
 def ecqv_cert_pk_extract(ecqv_utils_path, identity, ca_pk, cert):
     s = os.popen(
-        "%s cert_pk_extract -i %s -c %s -a %s"
+        '%s cert_pk_extract -i "%s" -c "%s" -a "%s"'
         % (
             ecqv_utils_path,
             identity,
@@ -135,6 +141,23 @@ def ecqv_cert_pk_extract(ecqv_utils_path, identity, ca_pk, cert):
             cert,
         )
     )
+    return s.read().strip()
+
+
+def ecqv_encrypt(ecqv_utils_path, key, message):
+    s = os.popen('%s encrypt -k "%s" -m "%s"' % (ecqv_utils_path, key, message))
+
+    return s.read().strip()
+
+
+def ecqv_decrypt(ecqv_utils_path, key, cypher):
+    s = os.popen('%s decrypt -k "%s" -m "%s"' % (ecqv_utils_path, key, cypher))
+
+    return s.read().strip()
+
+
+def ecqv_mul(ecqv_utils_path, priv, pub):
+    s = os.popen('%s mul -k "%s" -p "%s"' % (ecqv_utils_path, priv, pub))
     return s.read().strip()
 
 

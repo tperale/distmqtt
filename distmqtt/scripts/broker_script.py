@@ -14,7 +14,7 @@ import os
 from contextlib import AsyncExitStack
 import asyncclick as click
 from distmqtt.broker import create_broker
-from distmqtt.utils import read_yaml_config, ecqv_pem_pk_extract
+from distmqtt.utils import read_yaml_config
 from asyncscope import main_scope
 
 

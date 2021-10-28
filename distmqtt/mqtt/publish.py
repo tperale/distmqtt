@@ -28,6 +28,8 @@ class PublishVariableHeader(MQTTVariableHeader):
             topic_name = "/".join(topic_name)
         self.topic_name = topic_name
         self.packet_id = packet_id
+        self.v = None
+        self.s = None
 
     def __repr__(self):
         return type(self).__name__ + "(topic={0}, packet_id={1})".format(
@@ -42,7 +44,9 @@ class PublishVariableHeader(MQTTVariableHeader):
         return out
 
     @classmethod
-    async def from_stream(cls, reader: anyio.abc.ByteStream, fixed_header: MQTTFixedHeader):
+    async def from_stream(
+        cls, reader: anyio.abc.ByteStream, fixed_header: MQTTFixedHeader
+    ):
         topic_name = await decode_string(reader)
         has_qos = (fixed_header.flags >> 1) & 0x03
         if has_qos:
@@ -60,7 +64,9 @@ class PublishPayload(MQTTPayload):
         super().__init__()
         self.data = data
 
-    def to_bytes(self, fixed_header: MQTTFixedHeader, variable_header: MQTTVariableHeader):
+    def to_bytes(
+        self, fixed_header: MQTTFixedHeader, variable_header: MQTTVariableHeader
+    ):
         return self.data
 
     @classmethod
@@ -102,7 +108,8 @@ class PublishPacket(MQTTPacket):
         else:
             if fixed.packet_type != PUBLISH:
                 raise DistMQTTException(
-                    "Invalid fixed packet type %s for PublishPacket init" % fixed.packet_type
+                    "Invalid fixed packet type %s for PublishPacket init"
+                    % fixed.packet_type
                 )
             header = fixed
 
@@ -177,7 +184,9 @@ class PublishPacket(MQTTPacket):
         self.variable_header.topic_name = name
 
     @classmethod
-    def build(cls, topic_name: str, message: bytes, packet_id: int, dup_flag, qos, retain):
+    def build(
+        cls, topic_name: str, message: bytes, packet_id: int, dup_flag, qos, retain
+    ):
         v_header = PublishVariableHeader(topic_name, packet_id)
         payload = PublishPayload(message)
         packet = PublishPacket(variable_header=v_header, payload=payload)

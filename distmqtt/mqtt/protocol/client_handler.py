@@ -18,7 +18,7 @@ from distmqtt.plugins.manager import PluginManager
 from distmqtt.utils import (
     Future,
     create_queue,
-    ecqv_pem_pk_extract,
+    ecqv_pk_extract,
     ecqv_cert_reception,
     ecqv_generate_confirmation,
 )
@@ -52,7 +52,7 @@ class ClientProtocolHandler(ProtocolHandler):
         vh.clean_session_flag = self.session.clean_session
         vh.will_retain_flag = self.session.will_retain
         payload.client_id = self.session.client_id
-        payload.pk = ecqv_pem_pk_extract(self.session.ecqv, self.session.capath)
+        payload.pk = ecqv_pk_extract(self.session.ecqv, self.session.capath)
 
         if self.session.is_subscriber:
             vh.is_subscriber_flag = True
@@ -80,7 +80,7 @@ class ClientProtocolHandler(ProtocolHandler):
         return packet
 
     def _build_confirmation_packet(self):
-        pk = ecqv_pem_pk_extract(self.session.ecqv, self.session.g)
+        pk = ecqv_pk_extract(self.session.ecqv, self.session.g)
         verify = ecqv_generate_confirmation(
             self.session.ecqv,
             self.session.broker_pk,

@@ -22,8 +22,8 @@ from distmqtt.mqtt.confirmation import ConfirmationPacket
 from distmqtt.utils import (
     format_client_message,
     create_queue,
+    ecqv_pk_extract,
     ecqv_cert_generate,
-    ecqv_pem_pk_extract,
     ecqv_cert_pk_extract,
     ecqv_verify_confirmation,
     ecqv_group_generate,
@@ -124,11 +124,11 @@ class BrokerProtocolHandler(ProtocolHandler):
                 self.session.pk,
                 self.session.capath,
             )
-            pk = ecqv_pem_pk_extract(self.session.ecqv, self.session.capath)
+            pk = ecqv_pk_extract(self.session.ecqv, self.session.capath)
             connack = ConnackPacket.build(
                 self.session.parent, CONNECTION_ACCEPTED, ca, r, pk
             )
-            ca_pk = ecqv_pem_pk_extract(self.session.ecqv, self.session.capath)
+            ca_pk = ecqv_pk_extract(self.session.ecqv, self.session.capath)
             self.session.cert = ecqv_cert_pk_extract(
                 self.session.ecqv, self.session.client_id, ca_pk, ca
             )
