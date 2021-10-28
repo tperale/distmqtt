@@ -45,6 +45,7 @@ import anyio
 import os
 import json
 import socket
+import aioconsole
 from distmqtt.client import open_mqttclient, ConnectException, _codecs
 from distmqtt.mqtt.constants import QOS_0
 from distmqtt.version import get_version
@@ -75,7 +76,7 @@ def _get_extra_headers(arguments):
         return {}
 
 
-def _get_message(arguments):
+async def _get_message(arguments):
     if arguments["-n"]:
         yield b""
     if arguments["-m"]:
@@ -92,7 +93,8 @@ def _get_message(arguments):
         except Exception:
             logger.exception("Failed to read file '%s'", arguments["-f"])
     if arguments["-l"]:
-        for line in sys.stdin:
+        while 1:
+            line = await aioconsole.ainput()
             if line:
                 yield line.encode(encoding="utf-8")
     if arguments["-s"]:
@@ -127,7 +129,7 @@ async def do_pub(client, arguments):
         retain = arguments["-r"]
         async with anyio.create_task_group() as tg:
             await client.publisher_subs(topic, qos)
-            for message in _get_message(arguments):
+            async for message in _get_message(arguments):
                 logger.info("%s Publishing to '%s'", client.client_id, topic)
                 tg.start_soon(client.publish, topic, message, qos, retain)
         logger.info("%s Disconnected from broker", client.client_id)
