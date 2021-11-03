@@ -17,7 +17,7 @@ except ImportError:
 from wsproto.utilities import ProtocolError
 from asyncwebsockets import create_websocket
 
-from distmqtt.utils import match_topic, create_queue
+from distmqtt.utils import match_topic, create_queue, ecqv_mul, ecqv_decrypt, ecqv_encrypt
 from distmqtt.session import Session
 from distmqtt.errors import NoDataException
 from distmqtt.mqtt.connack import CONNECTION_ACCEPTED, CLIENT_ERROR
@@ -376,9 +376,7 @@ class MQTTClient:
         :param retain: retain flag. Defaults to ``default_retain`` config parameter or False.
         :param codec: Codec to encode the message with. Defaults to the connection's.
         """
-
         codec = get_codec(codec, self.codec, config=self.config)
-        message = codec.encode(message)
         if not isinstance(topic, str):
             topic = "/".join(topic)
 
@@ -394,6 +392,13 @@ class MQTTClient:
                 retain = self.config["topics"][topic]["retain"]
             except KeyError:
                 retain = self.config["default_retain"]
+
+        pk, k = self._topics_keys[topic]
+        crypt_k = ecqv_mul(self.session.ecqv, k, pk)
+        message = ecqv_encrypt(self.session.ecqv, crypt_k, message.decode("utf-8")).encode("utf-8")
+        print("Cypher key : ", crypt_k, "\nMessage data: ", message)
+        message = codec.encode(message)
+
         # TODO Published message should be encrypted with the gk of the recipient
         return await self._handler.mqtt_publish(topic, message, qos, retain)
 
@@ -429,7 +434,6 @@ class MQTTClient:
         for topic, keys in zip(topics, suback.group_keys):
             # TODO The GK should get decrypted here once they are sent encrypted.
             a_filter, _ = topic
-            pk, k = keys
             self._topics_keys[a_filter] = keys
             self._tg.start_soon(self._update_loop, self._handler, a_filter)
 
@@ -440,12 +444,9 @@ class MQTTClient:
         """
         suback = await self._handler.mqtt_subscribe([(topic, qos)], self.session.next_packet_id)
 
-        for t , keys in zip([topic], suback.group_keys):
-            print(keys)
-            # a_filter, _ = t
-            # pk, k = keys
-            # self._topics_keys[a_filter] = keys
-            # self._tg.start_soon(self._update_loop, self._handler, a_filter)
+        for t, keys in zip([topic], suback.group_keys):
+            self._topics_keys[t] = keys
+            self._tg.start_soon(self._update_loop, self._handler, t)
 
         return suback.return_codes
 
@@ -529,7 +530,12 @@ class MQTTClient:
                 if self._q is None:
                     raise RuntimeError("Overflow. Please resubscribe.")
                 message = await self._q.get()
+                pk, k = self.client._topics_keys[topic]
+                crypt_k = ecqv_mul(self.client.session.ecqv, k, pk)
+
                 message.data = self.codec.decode(message.publish_packet.data)
+                print("Cypher key : ", crypt_k, "\nMessage data: ", message.data)
+                message.data = ecqv_decrypt(self.client.session.ecqv, crypt_k, message.data.decode("utf-8"))
                 # TODO This is where the incoming messages get retrieved
                 # TODO This is where I should use my key to decrypt the message
                 return message
