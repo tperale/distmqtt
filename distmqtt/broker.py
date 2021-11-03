@@ -669,6 +669,7 @@ class Broker:
                                 )
 
                         if nsubs.get(a_filter):
+                            # Sending the updated key to the counterpart
                             for sess, _ in nsubs[a_filter]:
                                 if sess.client_id == client_session.client_id:
                                     continue

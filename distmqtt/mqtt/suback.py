@@ -49,8 +49,14 @@ class SubackPayload(MQTTPayload):
         for t in self.topics:
             out.extend(encode_string(t))
         for pk, k in self.group_keys:
-            out.extend(encode_string(pk))
-            out.extend(encode_string(k))
+            if len(pk):
+                out.extend(encode_string(pk))
+            else:
+                out.extend(encode_string("0"))
+            if len(k):
+                out.extend(encode_string(k))
+            else:
+                out.extend(encode_string("0"))
         for return_code in self.return_codes:
             out.extend(int_to_bytes(return_code, 1))
 
@@ -77,6 +83,10 @@ class SubackPayload(MQTTPayload):
         for _ in range(topic_num):
             pk = await decode_string(reader)
             k = await decode_string(reader)
+            if pk == "0":
+                pk = None
+            if k == "0":
+                k = None
             group_keys.append((pk, k))
 
         for _ in range(topic_num):
