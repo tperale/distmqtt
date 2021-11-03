@@ -161,6 +161,7 @@ class ConnectPayload(MQTTPayload):
 
     __slots__ = (
         "client_id",
+        "pk",
         "will_topic",
         "will_message",
         "username",
@@ -187,15 +188,13 @@ class ConnectPayload(MQTTPayload):
         self.pk = pk
 
     def __repr__(self):
-        return "ConnectPayload(client_id={0}, will_topic={1}, will_message={2}, username={3}, password={4}, pk={5}, r={6}, cert={7})".format(
+        return "ConnectPayload(client_id={0}, will_topic={1}, will_message={2}, username={3}, password={4}, pk={5})".format(
             self.client_id,
             self.will_topic,
             self.will_message,
             self.username,
             self.password,
             self.pk,
-            self.r,
-            self.cert,
         )
 
     @classmethod
