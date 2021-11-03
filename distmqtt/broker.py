@@ -629,14 +629,31 @@ class Broker:
                     group_keys = []
                     for subscription in subscriptions["topics"]:
                         subs = self._subscriptions if client_session.is_subscriber else self._publishers
+                        nsubs = self._publishers if client_session.is_subscriber else self._subscriptions
                         result = await self.add_subscription(subscription, client_session, subs)
                         return_codes.append(result)
                         a_filter = tuple(subscription[0].split("/"))
                         gk = generate_group_key(subs[a_filter])
+                        keypair = None
+                        nkeypair = None
                         if client_session.is_subscriber:
                             self._group_keys_subs[a_filter] = tuple(gk)
+                            pubs_gk = self._group_keys_pubs.get(a_filter)
+                            if pubs_gk is not None:
+                                keypair = (pubs_gk[0], gk[1])
+                                nkeypair = (gk[0], pubs_gk[1])
+                            else:
+                                keypair = ("", gk[1])
+                                nkeypair = (gk[0], "")
                         else:
                             self._group_keys_pubs[a_filter] = tuple(gk)
+                            subs_gk = self._group_keys_subs.get(a_filter)
+                            if subs_gk is not None:
+                                keypair = (subs_gk[0], gk[1])
+                                nkeypair = (gk[0], subs_gk[1])
+                            else:
+                                keypair = ("", gk[1])
+                                nkeypair = (gk[0], "")
 
                         # Sending the newly generated group key to each subscriber of the topic in a suback packet
                         for sess, _ in subs[a_filter]:
@@ -648,11 +665,24 @@ class Broker:
                                 # - If we have a new publisher subs: send back the subscriber group
                                 #   private key and the public key of the publishers.
                                 await handler_.mqtt_acknowledge_subscription(
-                                    0, [0], [gk], [subscription[0]]
+                                    0, [0], [keypair], [subscription[0]]
                                 )
 
+                        if nsubs.get(a_filter):
+                            for sess, _ in nsubs[a_filter]:
+                                if sess.client_id == client_session.client_id:
+                                    continue
+                                handler_ = self._get_handler(sess)
+                                if handler_ is not None:
+                                    # TODO Send the correct public and private key combo to the pub/sub
+                                    # - If we have a new publisher subs: send back the subscriber group
+                                    #   private key and the public key of the publishers.
+                                    await handler_.mqtt_acknowledge_subscription(
+                                        0, [0], [nkeypair], [subscription[0]]
+                                    )
+
                         # TODO each group keys should be encrypted to be sent back
-                        group_keys.append(gk)
+                        group_keys.append(keypair)
 
                     await handler.mqtt_acknowledge_subscription(
                         subscriptions["packet_id"], return_codes, group_keys, [t for t, _ in subscriptions["topics"]]
