@@ -237,7 +237,7 @@ class ProtocolHandler:
         self.logger.debug("%d messages not redelivered due to timeout", pending)
         self.logger.debug("End messages delivery retries")
 
-    async def mqtt_publish(self, topic, data, qos, retain):
+    async def mqtt_publish(self, topic, data, qos, retain, v=None, sign=None):
         """
         Sends a MQTT publish message and manages messages flows.
         This methods doesn't return until the message has been acknowledged by receiver or timeout occur
@@ -258,7 +258,7 @@ class ProtocolHandler:
         else:
             packet_id = None
 
-        message = OutgoingApplicationMessage(packet_id, topic, qos, data, retain)
+        message = OutgoingApplicationMessage(packet_id, topic, qos, data, retain, v, sign)
         await self._handle_message_flow(message)
 
         return message
@@ -691,9 +691,12 @@ class ProtocolHandler:
                 qos,
                 publish_packet.data,
                 publish_packet.retain_flag,
+                publish_packet.variable_header.v,
+                publish_packet.variable_header.sign,
             )
             incoming_message.publish_packet = publish_packet
             if incoming_message.qos == QOS_0:
+                print('ici')
                 await self._handle_message_flow(incoming_message)
             else:
                 self._reader_task.start_soon(self._handle_message_flow, incoming_message)

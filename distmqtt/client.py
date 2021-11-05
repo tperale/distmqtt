@@ -17,7 +17,7 @@ except ImportError:
 from wsproto.utilities import ProtocolError
 from asyncwebsockets import create_websocket
 
-from distmqtt.utils import match_topic, create_queue, ecqv_mul, ecqv_decrypt, ecqv_encrypt
+from distmqtt.utils import match_topic, create_queue, ecqv_mul, ecqv_decrypt, ecqv_encrypt, ecqv_sign, ecqv_verify
 from distmqtt.session import Session
 from distmqtt.errors import NoDataException
 from distmqtt.mqtt.connack import CONNECTION_ACCEPTED, CLIENT_ERROR
@@ -377,6 +377,7 @@ class MQTTClient:
         :param codec: Codec to encode the message with. Defaults to the connection's.
         """
         codec = get_codec(codec, self.codec, config=self.config)
+        message = codec.decode(message)
         if not isinstance(topic, str):
             topic = "/".join(topic)
 
@@ -393,14 +394,15 @@ class MQTTClient:
             except KeyError:
                 retain = self.config["default_retain"]
 
+        v, sign = ecqv_sign(self.session.ecqv, self.session.capath, message)
+
         pk, k = self._topics_keys[topic]
         crypt_k = ecqv_mul(self.session.ecqv, k, pk)
-        message = ecqv_encrypt(self.session.ecqv, crypt_k, message.decode("utf-8")).encode("utf-8")
+        message = ecqv_encrypt(self.session.ecqv, crypt_k, message).encode("utf-8")
         print("Cypher key : ", crypt_k, "\nMessage data: ", message)
         message = codec.encode(message)
-
-        # TODO Published message should be encrypted with the gk of the recipient
-        return await self._handler.mqtt_publish(topic, message, qos, retain)
+        print("Sign: ", v, sign)
+        return await self._handler.mqtt_publish(topic, message, qos, retain, v, sign)
 
     async def _update_loop(self, handler, topic):
         while True:

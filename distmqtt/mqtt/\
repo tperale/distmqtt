@@ -16,7 +16,7 @@ from distmqtt.codecs import decode_packet_id, decode_string, encode_string, int_
 
 class PublishVariableHeader(MQTTVariableHeader):
 
-    __slots__ = ("topic_name", "packet_id", "v", "sign")
+    __slots__ = ("topic_name", "packet_id")
 
     def __init__(self, topic_name: str, packet_id: int = None, v=None, sign=None):
         super().__init__()
@@ -51,15 +51,17 @@ class PublishVariableHeader(MQTTVariableHeader):
         cls, reader: anyio.abc.ByteStream, fixed_header: MQTTFixedHeader
     ):
         topic_name = await decode_string(reader)
-        has_qos = (fixed_header.flags & 0x02) >> 1
+        has_qos = (fixed_header.flags >> 1) & 0x02
         if has_qos:
             packet_id = await decode_packet_id(reader)
         else:
             packet_id = None
         has_sign = (fixed_header.flags & 0x04) >> 1
         if has_sign:
-            v = await decode_string(reader)
-            sign = await decode_string(reader)
+            # v = await decode_string(reader)
+            # sign = await decode_string(reader)
+            v = None
+            sign = None
         else:
             v = None
             sign = None
@@ -168,7 +170,7 @@ class PublishPacket(MQTTPacket):
 
     @qos.setter
     def qos(self, val: int):
-        self.fixed_header.flags &= 0xFD
+        self.fixed_header.flags &= 0xFC
         self.fixed_header.flags |= val << 1
 
     @property

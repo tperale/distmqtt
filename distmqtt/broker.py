@@ -51,13 +51,15 @@ class BrokerException(Exception):
 
 class RetainedApplicationMessage:
 
-    __slots__ = ("source_session", "topic", "data", "qos")
+    __slots__ = ("source_session", "topic", "data", "qos", "v", "sign")
 
-    def __init__(self, source_session, topic, data, qos=None):
+    def __init__(self, source_session, topic, data, qos=None, v=None, sign=None):
         self.source_session = source_session
         self.topic = topic
         self.data = data
         self.qos = qos
+        self.v = v
+        self.sign = sign
 
 
 class Server:
@@ -131,8 +133,8 @@ class BrokerContext(BaseContext):
         self._broker_instance = broker
         self.config = config
 
-    async def broadcast_message(self, topic, data, qos=None, retain=False):
-        await self._broker_instance.internal_message_broadcast(topic, data, qos, retain=retain)
+    async def broadcast_message(self, topic, data, qos=None, retain=False, v=None, sign=None):
+        await self._broker_instance.internal_message_broadcast(topic, data, qos, retain=retain, v=None, sign=None)
 
     @property
     def sessions(self):
@@ -466,8 +468,8 @@ class Broker:
         await self.plugins_manager.fire_event(EVENT_BROKER_POST_SHUTDOWN)
         self.transitions.stopping_success()
 
-    async def internal_message_broadcast(self, topic, data, qos=None, retain=None):
-        return await self.broadcast_message(None, topic, data, qos=qos, retain=retain)
+    async def internal_message_broadcast(self, topic, data, qos=None, retain=None, v=None, sign=None):
+        return await self.broadcast_message(None, topic, data, qos=qos, retain=retain, v=v, sign=sign)
 
     async def ws_connected(self, conn, listener_name):
         async def subpro(req):
@@ -957,6 +959,8 @@ class Broker:
                                 broadcast["data"],
                                 qos,
                                 retain=False,
+                                v=broadcast["v"],
+                                sign=broadcast["sign"],
                             )
                         )
                     else:
@@ -972,23 +976,26 @@ class Broker:
                             broadcast["topic"],
                             broadcast["data"],
                             qos,
+                            v=broadcast["v"],
+                            sign=broadcast["sign"],
                         )
                         await target_session.retained_messages.put(retained_message)
 
     async def broadcast_message(
-        self, session, topic, data, force_qos=None, qos=None, retain=False
+        self, session, topic, data, force_qos=None, qos=None, retain=False, v=None, sign=None
     ):
         if not isinstance(data, (bytes, bytearray)):
             self.logger.error("Not bytes %s:%r", topic, data)
             return
         if retain and not self._do_retain:
             raise RuntimeError("Support for retained messages is off")
-        broadcast = {"session": session, "topic": topic, "data": data}
+        broadcast = {"session": session, "topic": topic, "data": data, "v": v, "sign": sign}
         if force_qos:
             broadcast["qos"] = force_qos
         await self._broadcast_queue_s.send(broadcast)
         if retain:
-            self.retain_message(session, topic, data, force_qos or qos)
+            # TODO v sign
+            self.retain_message(session, topic, data, force_qos or qos, v, sign)
 
     async def publish_session_retained_messages(self, session):
         if self.logger.isEnabledFor(logging.DEBUG):
@@ -1007,6 +1014,8 @@ class Broker:
                     retained.data,
                     retained.qos,
                     True,
+                    retained.v,
+                    retained.sign,
                 )
 
     async def publish_retained_messages_for_subscription(self, subscription, session):

@@ -33,6 +33,8 @@ class ApplicationMessage:
         "qos",
         "data",
         "retain",
+        "v",
+        "sign",
         "publish_packet",
         "puback_packet",
         "pubrec_packet",
@@ -40,7 +42,7 @@ class ApplicationMessage:
         "pubcomp_packet",
     )
 
-    def __init__(self, packet_id, topic, qos, data, retain):
+    def __init__(self, packet_id, topic, qos, data, retain, v, sign):
         if not isinstance(data, (bytes, bytearray)):
             raise RuntimeError("Non-bytes data for %s: %r" % (topic, data))
 
@@ -58,6 +60,12 @@ class ApplicationMessage:
 
         self.retain = retain
         """ Publish message retain flag"""
+
+        self.v = v
+        """ Schnorr signature random number """
+
+        self.sign = sign
+        """ Schnorr signature """
 
         self.publish_packet = None
         """ :class:`distmqtt.mqtt.publish.PublishPacket` instance corresponding to the `PUBLISH <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718037>`_ packet in the messages flow. ``None`` if the PUBLISH packet has not already been received or sent."""
@@ -82,7 +90,14 @@ class ApplicationMessage:
         :return: :class:`distmqtt.mqtt.publish.PublishPacket` built from ApplicationMessage instance attributes
         """
         return PublishPacket.build(
-            self.topic, self.data, self.packet_id, dup, self.qos, self.retain
+            self.topic,
+            self.data,
+            self.packet_id,
+            dup,
+            self.qos,
+            self.retain,
+            self.v,
+            self.sign,
         )
 
     def __eq__(self, other):
@@ -107,9 +122,9 @@ class IncomingApplicationMessage(ApplicationMessage):
 
     __slots__ = ("direction",)
 
-    def __init__(self, packet_id, topic, qos, data, retain):
+    def __init__(self, packet_id, topic, qos, data, retain, v, sign):
         self.direction = INCOMING
-        super().__init__(packet_id, topic, qos, data, retain)
+        super().__init__(packet_id, topic, qos, data, retain, v, sign)
 
 
 class OutgoingApplicationMessage(ApplicationMessage):
@@ -120,9 +135,9 @@ class OutgoingApplicationMessage(ApplicationMessage):
 
     __slots__ = ("direction",)
 
-    def __init__(self, packet_id, topic, qos, data, retain):
+    def __init__(self, packet_id, topic, qos, data, retain, v, sign):
         self.direction = OUTGOING
-        super().__init__(packet_id, topic, qos, data, retain)
+        super().__init__(packet_id, topic, qos, data, retain, v, sign)
 
 
 class Session:
@@ -280,6 +295,8 @@ class Session:
                         app_message.data,
                         qos=app_message.qos,
                         retain=app_message.publish_packet.retain_flag,
+                        v=app_message.v,
+                        sign=app_message.sign,
                     )
         finally:
             with anyio.fail_after(2, shield=True):
