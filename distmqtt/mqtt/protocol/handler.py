@@ -696,7 +696,6 @@ class ProtocolHandler:
             )
             incoming_message.publish_packet = publish_packet
             if incoming_message.qos == QOS_0:
-                print('ici')
                 await self._handle_message_flow(incoming_message)
             else:
                 self._reader_task.start_soon(self._handle_message_flow, incoming_message)
@@ -708,4 +707,3 @@ class ProtocolHandler:
 
     async def wait_disconnect(self):
         if self._disconnect_waiter is not None:
-            return await self._disconnect_waiter.wait()
