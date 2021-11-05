@@ -707,3 +707,4 @@ class ProtocolHandler:
 
     async def wait_disconnect(self):
         if self._disconnect_waiter is not None:
+            return await self._disconnect_waiter.wait()
