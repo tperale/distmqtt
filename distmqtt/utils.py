@@ -162,18 +162,23 @@ def ecqv_mul(ecqv_utils_path, priv, pub):
 
 
 def ecqv_sign(ecqv_utils_path, key, message):
+    print('%s sign -k "%s" -m "%s"' % (ecqv_utils_path, key, message))
     s = os.popen('%s sign -k "%s" -m "%s"' % (ecqv_utils_path, key, message))
 
     return s.read().strip().split("\n")
 
 
 def ecqv_verify(ecqv_utils_path, key, message, v, signature):
+    print(
+        '%s verify -k "%s" -m "%s" -v "%s" -s "%s"'
+        % (ecqv_utils_path, key, message, v, signature)
+    )
     s = os.popen(
-        '%s encrypt -k "%s" -m "%s" -v "%s" -s "%s"'
+        '%s verify -k "%s" -m "%s" -v "%s" -s "%s"'
         % (ecqv_utils_path, key, message, v, signature)
     )
 
-    return s.read().strip().split("\n")
+    return s.read().strip()
 
 
 # utility code

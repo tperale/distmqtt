@@ -377,7 +377,7 @@ class MQTTClient:
         :param codec: Codec to encode the message with. Defaults to the connection's.
         """
         codec = get_codec(codec, self.codec, config=self.config)
-        message = codec.decode(message)
+        message = codec.decode(message).decode("utf-8")
         if not isinstance(topic, str):
             topic = "/".join(topic)
 
@@ -394,9 +394,8 @@ class MQTTClient:
             except KeyError:
                 retain = self.config["default_retain"]
 
-        v, sign = ecqv_sign(self.session.ecqv, self.session.capath, message)
-
         pk, k = self._topics_keys[topic]
+        v, sign = ecqv_sign(self.session.ecqv, k, message)
         crypt_k = ecqv_mul(self.session.ecqv, k, pk)
         message = ecqv_encrypt(self.session.ecqv, crypt_k, message).encode("utf-8")
         print("Cypher key : ", crypt_k, "\nMessage data: ", message)
@@ -538,8 +537,8 @@ class MQTTClient:
                 message.data = self.codec.decode(message.publish_packet.data)
                 print("Cypher key : ", crypt_k, "\nMessage data: ", message.data)
                 message.data = ecqv_decrypt(self.client.session.ecqv, crypt_k, message.data.decode("utf-8"))
-                # TODO This is where the incoming messages get retrieved
-                # TODO This is where I should use my key to decrypt the message
+                if (ecqv_verify(self.client.session.ecqv, pk, message.data, message.v, message.sign)):
+                    print("Signature verification passed")
                 return message
 
             async def __len__(self):

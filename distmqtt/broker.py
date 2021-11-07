@@ -994,7 +994,6 @@ class Broker:
             broadcast["qos"] = force_qos
         await self._broadcast_queue_s.send(broadcast)
         if retain:
-            # TODO v sign
             self.retain_message(session, topic, data, force_qos or qos, v, sign)
 
     async def publish_session_retained_messages(self, session):
